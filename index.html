@@ -215,6 +215,9 @@
     let nextMilestone = 1000, firstAttemptAtThisQuestion = true;
     let playerIDValue = "";
     let currentQuestionSet = [];
+    
+    // Memory for analytics
+    let questionLogs = []; 
 
     const ambulance = { x: 162, y: 480, w: 36, h: 70, speed: 7 };
     let traffic = [];
@@ -538,11 +541,11 @@
         });
     }
 
-function handleAnswer(idx) {
+    function handleAnswer(idx) {
         const qData = currentQuestionSet[currentQuestionIndex];
         const isCorrect = (idx === qData.correct);
 
-        // This records every click!
+        // Record the attempt for analytics
         questionLogs.push({
             qText: qData.q,
             status: isCorrect ? "CORRECT" : "WRONG",
@@ -551,15 +554,23 @@ function handleAnswer(idx) {
 
         if (isCorrect) {
             if (firstAttemptAtThisQuestion) { syncScore++; }
-            feedbackMsg.innerText = "✓ DATA VALIDATED"; feedbackMsg.className = "correct";
+            feedbackMsg.innerText = "✓ DATA VALIDATED"; 
+            feedbackMsg.className = "correct";
             feedbackMsg.style.display = "block";
+            
             stability = Math.round((syncScore / currentQuestionSet.length) * 100);
             stabText.innerText = stability;
-            currentQuestionIndex++; batchCount++;
+            
+            currentQuestionIndex++; 
+            batchCount++;
+            
             setTimeout(() => {
                 feedbackMsg.style.display = "none";
-                if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) showQuestion();
-                else resumeGame();
+                if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) {
+                    showQuestion();
+                } else {
+                    resumeGame();
+                }
             }, 800);
         } else {
             if (firstAttemptAtThisQuestion) {
@@ -567,7 +578,8 @@ function handleAnswer(idx) {
                 stability = Math.round((syncScore / currentQuestionSet.length) * 100);
                 stabText.innerText = stability;
             }
-            feedbackMsg.innerText = "✗ SYSTEM LOCK: MISMATCH DETECTED"; feedbackMsg.className = "wrong";
+            feedbackMsg.innerText = "✗ SYSTEM LOCK: MISMATCH DETECTED"; 
+            feedbackMsg.className = "wrong";
             feedbackMsg.style.display = "block";
         }
     }
@@ -584,7 +596,7 @@ function handleAnswer(idx) {
         const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
         const completionCode = `${modKey.substring(0,3).toUpperCase()}-${stability}-${syncScore}-${playerIDValue}-${randomHex}`;
         
-        // This packages the "Mistakes List" to send to Google
+        // Packages the Mistakes List to send to Google
         const logData = encodeURIComponent(JSON.stringify(questionLogs));
 
         const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxeE_vL4yLQCP8mR8NJXGqcOjljoGG6l-HHsvRh6dTA0z48N7cYx8iETRbBv5iFG31d3w/exec"; 
