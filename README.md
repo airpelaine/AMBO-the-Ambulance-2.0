@@ -1,2 +1,673 @@
-# AMBO-the-Ambulance-2.0
-EMR Training Competency Checklist
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AMBO - Automated Module-Based Outcome</title>
+    <style>
+        :root {
+            --primary-blue: #00d4ff;
+            --emergency-red: #ff3e3e;
+            --warning-gold: #ffcc00;
+            --success-green: #27ae60;
+            --bg-dark: #0f0f0f;
+        }
+
+        body { 
+            display: flex; justify-content: center; align-items: flex-start; 
+            height: 100vh; margin: 0; background: var(--bg-dark); 
+            font-family: 'Segoe UI', Roboto, sans-serif; color: white; overflow: hidden;
+            touch-action: none; padding-top: 15px;
+        }
+
+        .container { 
+            position: relative; display: flex; flex-direction: column; align-items: center; 
+            width: 100%; max-width: 420px; margin-top: 60px;
+        }
+
+        canvas { 
+            background: #1a1a1a; border: 3px solid #333; border-radius: 16px; 
+            width: 92%; height: auto; box-shadow: 0 0 40px rgba(0,212,255,0.15); 
+        }
+        
+        .hud-header-tag { 
+            position: absolute; top: -50px; left: 4%; right: 4%;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; color: #fff; background: rgba(30, 30, 30, 0.9); 
+            padding: 8px 12px; border-radius: 8px; border: 1px solid #444;
+            letter-spacing: 1px;
+        }
+
+        .stats-bar {
+            width: 92%; display: flex; justify-content: space-between;
+            margin-bottom: 8px; font-size: 12px; font-weight: bold;
+        }
+        .stat-item { display: flex; align-items: center; gap: 4px; }
+        .stat-red { color: var(--emergency-red); }
+        .stat-blue { color: var(--primary-blue); }
+
+        #mainOverlay {
+            position: absolute; top: 0px; left: 4%; right: 4%; bottom: 80px;
+            background: rgba(10, 10, 10, 0.96); border: 2px solid var(--primary-blue); border-radius: 20px;
+            display: flex; flex-direction: column; padding: 20px; z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .story-header { font-size: 18px; color: var(--emergency-red); font-weight: 900; text-align: center; margin-bottom: 10px; text-transform: uppercase; }
+        .story-text { 
+            font-size: 13px; color: #eee; margin-bottom: 15px; line-height: 1.5; 
+            text-align: center; background: rgba(255,255,255,0.05); padding: 15px; 
+            border-radius: 12px; border-left: 4px solid var(--primary-blue); min-height: 80px;
+        }
+        
+        .option-btn { 
+            background: #252525; text-align: left; margin-bottom: 8px; padding: 12px; 
+            border-radius: 10px; font-size: 12px; border: 1px solid #444; width: 100%; color: white;
+            cursor: pointer;
+        }
+        .option-btn:hover { background: #333; }
+        
+        #feedbackMsg { font-weight: bold; text-align: center; margin-bottom: 10px; font-size: 16px; display: none; padding: 8px; border-radius: 8px; }
+        .correct { color: var(--success-green); background: rgba(39, 174, 96, 0.1); }
+        .wrong { color: var(--emergency-red); background: rgba(255, 62, 62, 0.1); }
+
+        .form-group { margin-bottom: 12px; text-align: left; width: 100%; }
+        .form-group label { display: block; font-size: 10px; color: var(--primary-blue); margin-bottom: 5px; text-transform: uppercase; }
+        .form-group input, .form-group select { 
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; 
+            background: #111; color: white; box-sizing: border-box; font-size: 14px;
+        }
+
+        .ambo-avatar { width: 50px; height: 80px; margin: 0 auto 15px; position: relative; background: #fff; border-radius: 4px; border: 2px solid #ccc; }
+        .ambo-avatar::after { content: ''; position: absolute; top: 35px; left: 0; width: 100%; height: 12px; background: var(--emergency-red); }
+        .siren-light {
+            position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+            width: 34px; height: 8px; border-radius: 4px;
+            animation: flickerSiren 0.3s infinite alternate;
+        }
+        @keyframes flickerSiren {
+            0% { background: var(--emergency-red); box-shadow: 0 0 15px var(--emergency-red); }
+            100% { background: var(--primary-blue); box-shadow: 0 0 15px var(--primary-blue); }
+        }
+
+        .progress-container { width: 92%; height: 8px; background: #222; border-radius: 10px; margin-top: 15px; border: 1px solid #333; overflow: hidden; }
+        #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary-blue), #00ff88); transition: width 0.4s ease; }
+        
+        .game-btn { padding: 16px 24px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-green { background: var(--success-green); width: 100%; margin-top: 10px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
+        .reset-btn { background: none; border: none; color: #666; margin-top: 10px; font-size: 11px; cursor: pointer; text-decoration: underline; font-weight: bold; }
+        
+        .result-data-box {
+            background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px;
+            padding: 15px; margin: 15px 0; width: 85%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="hud-header-tag">
+        <span id="hudModuleTitle">CLINICAL SERVICES</span>
+        <span id="hudPlayerID">ID: ---</span>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item stat-red">💓 STABILITY: <span id="stabilityDisplay">0</span>%</div>
+        <div class="stat-item stat-blue">🏁 <span id="dist">0</span>m</div>
+    </div>
+    
+    <canvas id="game" width="360" height="580"></canvas>
+    
+    <div id="mainOverlay">
+        <div id="screenStart" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+            <div class="ambo-avatar"><div class="siren-light"></div></div>
+            <h1 style="margin: 0; color: #fff; font-size: 28px;">🚑 AMBO</h1>
+            <p style="color: var(--warning-gold); font-size: 11px; letter-spacing: 1px; margin-bottom: 30px;">Automated Module-Based Outcome</p>
+            <button class="game-btn btn-green" onclick="showScreen('screenDetails')">START MISSION</button>
+        </div>
+
+        <div id="screenDetails" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
+            <div class="story-header">DEPLOYMENT</div>
+            <div class="form-group">
+                <label>Training Module</label>
+                <select id="trainingModule">
+                    <option value="emergency">Emergency Care</option>
+                    <option value="ambulatory">Ambulatory Care</option>
+                    <option value="basic">Basic Navigation</option>
+                    <option value="acute_care">Acute Care</option>
+                    <option value="acute">Acute/Surgical Care</option>
+                    <option value="shiftmanager">Shift Manager Roles</option>
+                    <option value="discharge">Discharge Officer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Assigned Site</label>
+                <select id="playerSite">
+                    <option value="Quezon City">St. Luke's - Quezon City</option>
+                    <option value="Global City">St. Luke's - Global City</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Player Number</label>
+                <input type="number" id="playerNum" inputmode="numeric" placeholder="Enter employee number">
+            </div>
+            <button class="game-btn btn-green" onclick="validateDetails()">CONFIRM DISPATCH</button>
+        </div>
+
+        <div id="screenBriefing" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
+            <div class="ambo-avatar"><div class="siren-light"></div></div>
+            <div class="story-header">🚨 MISSION BRIEFING 🚨</div>
+            <div id="storyContent" class="story-text"></div>
+            <button id="storyBtn" class="game-btn btn-green" onclick="nextStory()">CONTINUE</button>
+        </div>
+
+        <div id="screenQuiz" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
+            <div id="feedbackMsg"></div>
+            <div id="qText" style="font-size: 14px; margin-bottom: 10px; font-weight: bold; line-height: 1.4;"></div>
+            <div id="optionsContainer"></div>
+        </div>
+
+        <div id="screenResult" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+            <div class="story-header" style="color: var(--success-green); font-size: 22px;">MISSION ACCOMPLISHED!</div>
+            
+            <div class="result-data-box">
+                <div id="finalPlayerDisplay" style="color: var(--primary-blue); font-size: 16px; font-weight: bold; margin-bottom: 10px;">ID: ---</div>
+                <div style="display: flex; justify-content: space-around;">
+                    <div>
+                        <div id="finalStability" style="font-size: 32px; font-weight: bold; color: #fff;">0%</div>
+                        <p style="font-size: 9px; color: #aaa; margin:0;">STABILITY</p>
+                    </div>
+                    <div>
+                        <div id="finalSync" style="font-size: 32px; font-weight: bold; color: var(--warning-gold);">0/0</div>
+                        <p style="font-size: 9px; color: #aaa; margin:0;">SYSTEM SYNC</p>
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-size: 11px; color: var(--warning-gold); font-weight: bold; margin-bottom: 5px;">🚨 FINAL STEP REQUIRED:</p>
+            <p style="font-size: 11px; color: #eee; margin-bottom: 15px; width: 85%; line-height: 1.4;">
+                Click below to finalize your session. You will be redirected to the Validation Portal. <br>
+                <b>COPY the Unique Code</b> provided in the new window and <b>PASTE it into the Google Form</b> shown on that page.
+            </p>
+            
+            <button id="genBtn" class="game-btn btn-green" onclick="processValidation()">VALIDATE & SYNC</button>
+        </div>
+    </div>
+
+    <div class="progress-container"><div id="progressBar"></div></div>
+    <button class="reset-btn" onclick="location.reload()">RESET SIMULATION</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const distText = document.getElementById('dist'), 
+          stabText = document.getElementById('stabilityDisplay'),
+          hudPlayerID = document.getElementById('hudPlayerID'),
+          hudModuleTitle = document.getElementById('hudModuleTitle'),
+          progBar = document.getElementById('progressBar'), 
+          mainOverlay = document.getElementById('mainOverlay'), 
+          feedbackMsg = document.getElementById('feedbackMsg');
+
+    let distance = 0, stability = 0, currentQuestionIndex = 0, syncScore = 0;
+    let isPaused = true, inQuiz = false, gameStarted = false, arriving = false;
+    let roadOffset = 0, spawnTimer = 0, batchCount = 0, hospitalY = -600;
+    let nextMilestone = 1000, firstAttemptAtThisQuestion = true;
+    let playerIDValue = "";
+    let currentQuestionSet = [];
+
+    const ambulance = { x: 162, y: 480, w: 36, h: 70, speed: 7 };
+    let traffic = [];
+    const keys = {};
+
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (isPaused || arriving) return;
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.touches[0].clientX - rect.left;
+        const scaleX = canvas.width / rect.width;
+        ambulance.x = (touchX * scaleX) - (ambulance.w / 2);
+        if (ambulance.x < 15) ambulance.x = 15;
+        if (ambulance.x > canvas.width - ambulance.w - 15) ambulance.x = canvas.width - ambulance.w - 15;
+        e.preventDefault();
+    }, { passive: false });
+
+    function getBriefingText() {
+        return [
+            `"System online. Connection established. <b>Hello, Pilot ${playerIDValue}!</b> I am AMBO, your Automated Module-Based Outcome unit."`,
+            `"<b>HOW TO MOVE:</b> Use the <b>Left/Right Arrow Keys</b> or <b>Drag the ambulance</b> left or right."`,
+            `"Avoid collisions! Every impact results in a <b>-100m distance deduction</b>, delaying our arrival."`,
+            `"<b>The Sync Standard:</b> Only the <b>first answer</b> you choose counts toward your System Sync score."`,
+            `"Ready to deploy? Keep the data stream stable."`
+        ];
+    }
+
+    const allQuestions = {
+        acute_care: [
+            { q: "As a bedside nurse, I will access EMR using", a: ["Department of Pathology's COW/WOW", "the COW/WOW of the Nursing Unit where I am on duty", "any nursing unit's COW/WOW", "Any IT-approved devices"], correct: 1 },
+            { q: "If I forgot my EMR password, I should fill-out a System Access Request Form (SARF) and submit it to", a: ["IT USG", "my Nurse Unit Manager or Shift Manager", "HR Healthcare Academy", "Medical Informatics and Data Analytics"], correct: 0 },
+            { q: "Which icon color and symbol represent an emergency value that needs immediate action?", a: ["Green checkmark", "Blue exclamation mark", "Red exclamation mark", "Solid green box"], correct: 2 },
+            { q: "What does a Green Checkmark next to a vital sign mean?", a: ["The value is dangerously high", "The value is normal", "The sensor is broken", "The doctor has not seen it yet"], correct: 1 },
+            { q: "In printing prescription, you must go to", a: ["Print Reports", "Prescription Writer", "Enter Document", "Enter Order"], correct: 0 },
+            { q: "Which icon represents a value that is out of range but not a life-threatening emergency?", a: ["Blue exclamation mark", "Red exclamation mark", "Green checkmark", "Grey heart icon"], correct: 0 },
+            { q: "Which lab status is indicated by an icon featuring a pencil in the upper-left corner?", a: ["Received by Performing Unit", "Critical Value", "Pending Collection", "Final Results Reviewed"], correct: 2 },
+            { q: "What status does a green refresh or cycle arrow on a lab icon signify?", a: ["The specimen has been collected.", "The results are critical.", "The specimen is pending collection.", "The lab has received the specimen."], correct: 0 },
+            { q: "What is indicated when the refresh arrow on a lab icon is red?", a: ["Final results have been corrected.", "The specimen has been received by the lab unit.", "The specimen has not been collected for more than 29 minutes.", "The collection process is complete and successful."], correct: 2 },
+            { q: "Which status is represented by a blue refresh arrow on the lab icon?", a: ["Collected", "Pending Collection", "Critical Value", "Received by Performing Unit"], correct: 3 },
+            { q: "What does a blue checkmark on the lab icon indicate about the test results?", a: ["The specimen is still pending collection.", "The final results have been reviewed or corrected.", "The lab has just received the specimen.", "The results are critical and require immediate attention."], correct: 1 },
+            { q: "What does it mean if you see a red exclamation on tracking board", a: ["Specimen has not been collected for more than 24 hours", "Critical Value", "Received by Performing Unit", "Final result has been reviewed"], correct: 1 },
+            { q: "Which of the following Clinical Documents is NOT entered by the Nurse?", a: ["PreOp Note", "Admission Note Nursing", "PreOp Nursing Note", "Transfer Note"], correct: 0 },
+            { q: "During Admission from emergency room, once the patient arrives, the first thing to do in the EMR is", a: ["mark transfer as done in worklist manager", "change the Temporary Location of the patient to the designated room", "change the Assigned Location of the patient to the designated room", "add patient in my visit list"], correct: 2 },
+            { q: "The Nursing Unit can view patients for admission using the", a: ["Personalized Visit List", "Pending Incoming Visit List", "Incoming Patients Logbook", "Patient Flow"], correct: 1 },
+            { q: "In admitting a 19 year old patient, I should fill-out the", a: ["Admission Note Pediatric Nursing", "Admission Note Nursing", "Admission Note Newborn Nursing", "Admission Note Obstetric Nursing"], correct: 1 },
+            { q: "During Medication History Interview, when adding Home Medications for my patient, I should click", a: ["Prescription Writer", "Order Reconciliation", "Allergies Summary", "Add Item"], correct: 1 },
+            { q: "During history interview, when adding allergy information for my patient, should click", a: ["Order Reconciliation", "Allergies Summary", "Add Item", "Prescription Writer"], correct: 1 },
+            { q: "Infusion Pump worklist tasks are marked as done", a: ["Before End of Shift", "Before midnight", "Every hour", "Once performed"], correct: 1 },
+            { q: "Continuous oxygen therapy in worklist tasks are marked as done", a: ["Every end of shift", "Every midnight", "Every hour", "every start of shift"], correct: 0 },
+            { q: "POCT CBG in worklist manager are marked as done", a: ["Every shift", "After 8 hours", "Every hour", "When performed"], correct: 3 },
+            { q: "In cases of medication wastage, I can request for additional doses of medications by accomplishing the", a: ["Outpatient Medication Review", "Order Reconciliation", "Prescription Writer", "Order Message Manager"], correct: 3 },
+            { q: "Before administering the First Dose of a medication, the Charge Nurse should", a: ["Add a comment on the worklist manager indicating \"First Dose Checked\"", "Mark the task as done", "Enter his/her username and password to indicate First Dose Check", "administer the medication himself/herself"], correct: 0 },
+            { q: "I should reschedule medication doses", a: ["if instructed by the Charge Nurse", "There is no need to reschedule doses since they are automated", "If necessary after giving the first dose, or if current dose was given outside the time window.", "After giving each dose."], correct: 2 },
+            { q: "For a multidose vials, I will endorse the remaining contents of the vial by", a: ["adding a comment on the medication inside the worklist manager", "adding a comment on the flowsheets regarding the remaining dose", "verbally telling the next bedside nurse of the remaining dose", "adding a clinical document regarding the remaining dose"], correct: 0 },
+            { q: "A patient will be undergoing an appendectomy this afternoon. During the procedure, if the medication to be administered to the patient is from the general unit, you will use the KBMA to administer the medication, true or false?", a: ["FALSE", "TRUE"], correct: 1 },
+            { q: "The Request for Blood Pickup is activated via", a: ["the Worklist Manager", "the Orders Tab", "the Enter Order", "the KBMA"], correct: 1 },
+            { q: "Blood Transfusion reactions are documented using", a: ["Blood Transfusion Reaction Flowsheet", "Assessment and Cares", "Blood Transfusion Reaction Note", "Clinical Summary"], correct: 2 },
+            { q: "Plan of Care is accomplished", a: ["every hour", "every shift", "every problem occurrence", "as necessary"], correct: 2 },
+            { q: "I can add a new flowsheet in flowsheet criteria by clicking", a: ["Enter Document", "Create Referral", "Plus Sign", "Flowsheet Manager"], correct: 2 },
+            { q: "Critical Values are Documented using", a: ["Critical Results Notification", "Critical Value Flowsheet", "Critical Result Summary", "None of the above"], correct: 0 },
+            { q: "Order Reconciliation is done by the Physician", a: ["Every Patient Transfer due to a Change in Patient's Condition", "Every Patient Admission", "Every Patient Discharge", "All of the above"], correct: 3 },
+            { q: "The Discharge Order is placed by the", a: ["Attending Physician", "Referring Physician", "Co-manage Physician", "Attending Physician and all Referral MDs"], correct: 0 },
+            { q: "To create the Home Instructions, Nurse will enter the", a: ["Patient Instructions and Follow-up", "Referral Discharge Instructions", "Discharge Instructions, Inpatient", "MADPA"], correct: 2 },
+            { q: "The following is required prior to payment, except", a: ["CF2/CF4", "For Billing Discharge", "Ready for Billing", "Gate Pass", "OR Tech and PARES"], correct: 3 },
+            { q: "If iPro is unavailable, the anesthesiologist may opt to use _________ as BCP", a: ["PARES", "PreOp Nursing Note", "PAC", "Intake and Output Sheet"], correct: 0 },
+            { q: "This Document Allows me to request for an item, medication, or procedure during a system downtime", a: ["Credit Memo Request Note", "Doctor's Professional Fee Slip", "Turn-In Slip", "Patient Account Charge"], correct: 3 },
+            { q: "This is not retained as paper-based form", a: ["Newborn and Rooming-In Discharge Checklist", "CMRN", "Anesthesia Cart Checklist", "None of the above"], correct: 3 }
+        ],
+        emergency: [
+            { q: "What is the full name of the O-CIS system?", a: ["Offline Clinical Integrated Software", "Optimal Care Information System", "Online Clinical Information System", "Organized Clinical Input System"], correct: 2 },
+            { q: "What is the correct format for an O-CIS username?", a: ["Full Last Name + First Name Initial", "First Name + Middle Initial + Last Name", "Employee ID Number", "Initials of First Name/s + Middle Initial + Full Last Name"], correct: 3 },
+            { q: "Which keyboard shortcut is used to quickly lock a computer screen for security?", a: ["Alt + F4", "Ctrl + Shift + Esc", "Windows key + L", "Alt + Tab"], correct: 2 },
+            { q: "On the Tracking Board, what does a \"Lab\" icon with a white background with pencil signify?", a: ["Results are final", "The Lab order is pending collection", "Specimen has been received", "Order was cancelled"], correct: 1 },
+            { q: "Which dashboard icon indicates that microbiology order status is unreviewed results?", a: ["Micb with a blue checkmark", "Micb with a gray circle", "Micb with a red exclamation mark (!)", "Micb with a blue letter \"i\""], correct: 0 },
+            { q: "What does the \"e12\" icon on the tracking board represent?", a: ["Patient needs 12 emergency resources", "Patient is in room 12e", "Discharge is delayed by 12 hours", "Patient had a previous ED visit within the last 12 hours"], correct: 3 },
+            { q: "In the Worklist Manager, what color do medication tasks turn when they are 60 minutes past due?", a: ["Yellow", "Orange", "Red", "Purple"], correct: 2 },
+            { q: "In Registration, If a patient does not have a middle name, what character must be entered in the required middle name field?", a: ["N/A", "None", "A Dash (-)", "Leave it blank"], correct: 2 },
+            { q: "Which application is used to update the patient's \"Account Class\" (e.g., HMO or Individual)?", a: ["O-CIS Main Toolbar", "St. Luke’s Billing (SLB)", "Patient Flow", "Citrix Storefront"], correct: 1 },
+            { q: "Which ESI Level is assigned to a patient requiring \"immediate life-saving intervention\"?", a: ["ESI Level 1", "ESI Level 2", "ESI Level 3", "ESI Level 5"], correct: 0 },
+            { q: "Under ESI guidelines, how many \"resources\" are counted if a patient needs labs (blood/urine) and an X-ray?", a: ["One resource", "Two resources", "Three resources", "Zero resources"], correct: 1 },
+            { q: "What does the acronym ROE stand for during a system downtime?", a: ["Recovery Operating Engine", "Read Only Environment", "Remote Output Entry", "Real-time Observation Entry"], correct: 1 },
+            { q: "During the System downtime, The ROE system pulls flowsheet data from the past how many hours?", a: ["12 hours", "24 hours", "48 hours", "72 hours"], correct: 2 },
+            { q: "Which manual form is used for doctors' progress notes and orders during downtime?", a: ["Initial Triage Form", "Nurses’ Progress Notes", "DPNOS (Doctor’s Progress Note & Order Sheet)", "Patient Information Sheet"], correct: 2 },
+            { q: "What must be done with manual paper forms once the system is back online after downtime?", a: ["They should be shredded immediately", "They must be re-entered into O-CIS manually", "They must be scanned into Opal", "They are kept only in a physical binder"], correct: 2 },
+            { q: "In the Patient Flow application, what does the status code \"RACK\" stand for?", a: ["Request Active", "Room Assigned", "Acknowledged", "Recovery Area Check"], correct: 2 },
+            { q: "To claim CSS items encoded in SLB, how many printed copies of the screenshot are required?", a: ["One", "Two", "Three", "Four"], correct: 1 },
+            { q: "Which specific fall risk assessment tool is used for pediatric patients?", a: ["Morse Fall Risk Assessment", "Humpty Dumpty Fall Risk Assessment", "Pediatric General Assessment", "Fall Prevention Agreement"], correct: 1 },
+            { q: "At what age is a patient automatically considered at high risk for falls under the Morse tool?", a: ["55 and above", "60 and above", "65 and above", "70 and above"], correct: 2 },
+            { q: "What document is required for a patient to leave the ER once their bill is settled?", a: ["Final Receipt", "Gate pass", "Signed Waiver", "Medical Certificate"], correct: 1 },
+            { q: "Which O-CIS toolbar button allows you to lock the application for a short period without logging off?", a: ["Shutdown", "Suspend", "User Preferences", "Help"], correct: 1 },
+            { q: "What should a nurse check in SLB during the discharge process to ensure all charges are clear?", a: ["Triage Priority", "Room Assignment", "Invalid and Pending Transactions", "Patient Demographic Updates"], correct: 2 },
+            { q: "Who enters the Disposition Note in OCIS?", a: ["MD and CP", "MD only", "MD and RN", "RN and CP"], correct: 2 },
+            { q: "Upon endorsement, who will tag the patients to the incoming nurse?", a: ["The outgoing nurse will tag patients to the incoming nurse.", "The incoming nurse will tag his/her own patients.", "The incoming charge nurse will tag patients to incoming bedside nurses.", "The outgoing charge nurse will tag patients to incoming bedside nurses."], correct: 0 },
+            { q: "In the \"Enter Document\" tab, what does a \"Significant Field\" (Blue Asterisk Icon) indicate?", a: ["You cannot save the document until it is filled.", "The user can save the document, but it will be tagged as Incomplete.", "It is a mandatory field.", "It requires a physician's signature."], correct: 1 },
+            { q: "How many clinicians are required to verify blood products before transfusion?", a: ["One", "Two", "Three", "Four"], correct: 1 },
+            { q: "In the Emergency Department Process Flow, what is Step 1?", a: ["Vital Signs taking", "Room Assignment", "Registration at Triage Area", "Laboratory Tests"], correct: 2 },
+            { q: "What is the name of the automated dispensing cabinet used for medication management?", a: ["Zebra", "Topaz", "Omnicell", "Fujitsu"], correct: 2 },
+            { q: "Which device is specifically used for signing electronic document files with a handwritten signature?", a: ["Zebra Specimen Label Printer", "Fujitsu Document Scanner", "Topaz E-Signature Pad", "Barcode Scanner"], correct: 2 },
+            { q: "Which manual form is used to procure items from Pharmacy or CSS during downtime?", a: ["Doctor’s Order Sheet", "Patient Account Charge (PAC)", "Medical Certificate", "Triage Form"], correct: 1 }
+        ],
+        ambulatory: [
+            { q: "Which software application must be installed on your device to launch the O-CIS environment?", a: ["Adobe Reader", "Google Chrome", "Citrix Workspace/Receiver", "Microsoft Edge"], correct: 2 },
+            { q: "Which web portal address is used to access the St. Luke's O-CIS system?", a: ["http://ocis.stlukes.com.ph/", "http://portal.stlukes.com.ph/", "http://stlukes.citrix.com/", "http://emr.stlukes.com.ph/"], correct: 1 },
+            { q: "In the Allscripts Gateway Toolbar, which icon is used to \"Suspend\" or lock the application for a short period?", a: ["Red power button", "Green question mark", "Purple crescent moon", "Blue eyeglasses"], correct: 2 },
+            { q: "Which icon in the Gateway Toolbar allows you to \"Shutdown\" (exit and close) the Sunrise application?", a: ["Suspend", "Red power button", "User Preferences", "Recently Viewed Patient"], correct: 1 },
+            { q: "Where can you set the default Sunrise application that opens automatically upon startup?", a: ["Main Toolbar", "Chart Tab-Level Toolbar", "User Preferences Settings (General Tab)", "Citrix Storefront"], correct: 2 },
+            { q: "When searching for a patient in the \"Find Visit\" window, what information can you enter to find a record?", a: ["Last Name and Given Name", "MRN (Medical Record Number)", "Visit Number", "All of the above"], correct: 3 },
+            { q: "Why is it critical to ask if a patient has an existing PIN during registration?", a: ["To check their billing history", "To avoid double MRN (Medical Record Numbers)", "To verify their insurance", "To check for previous allergies"], correct: 1 },
+            { q: "What is the standard text format when typing patient names into the registration fields?", a: ["Sentence case", "ALL CAPS (CAPS LOCK)", "lowercase", "Title Case"], correct: 1 },
+            { q: "What should you do if a patient does not have a middle name during registration?", a: ["Leave the field blank", "Put \"N/A\"", "Put a DASH (-)", "Type \"NONE\""], correct: 2 },
+            { q: "Which function is used to document the physical arrival of the patient to the ANS unit?", a: ["Register Now", "Pre-Reg", "Arrive/Cancel Arrival", "Change Location"], correct: 2 },
+            { q: "Which order in O-CIS acts as the trigger to initiate the processing of payment in SLB?", a: ["Discharge Order", "Pharmacy Order", "Ready for Billing", "Lab Order"], correct: 2 },
+            { q: "When entering orders, what does the \"Current Providers\" radio button represent?", a: ["The nurse entering the data", "Attending and Referral MDs", "Fellow MDs and Residents", "The Billing Department"], correct: 1 },
+            { q: "Which specific field allows you to manually modify the title of a document?", a: ["Document Name", "Document Topic", "Sections", "Source"], correct: 1 },
+            { q: "What happens if a field tagged as \"Significant\" (marked with a blue circle) is left blank?", a: ["The document cannot be saved", "The document can only be saved as \"Incomplete\"", "The system fills it with \"N/A\" automatically", "It prevents the user from logging out"], correct: 1 },
+            { q: "Which function allows you to copy details from previous notes into a new note?", a: ["Refer to Note", "Modify Template", "Copy Forward", "Acronym Expansion"], correct: 2 },
+            { q: "What is the primary purpose of Knowledge Based Medication Administration (KBMA)?", a: ["To calculate drug costs", "To use patient and medication barcodes to validate administration", "To print pharmacy labels", "To order medications for the unit"], correct: 1 },
+            { q: "What are the first two steps in the KBMA workflow?", a: ["Scan drug, then scan patient", "Scan patient barcode, then scan medication barcode", "Check ID, then ask name", "Open MAR, then scan drug"], correct: 1 },
+            { q: "In the Worklist Manager, what does the color RED indicate for a task?", a: ["Continuous task", "Scheduled task", "Overdue task (Medications turn red when 60 mins past due)", "PRN task"], correct: 2 },
+            { q: "What is required to validate the administration of High Alert Medications (HAM)?", a: ["A doctor's signature only", "A Witness or Co-Signature", "Patient's verbal consent", "Pharmacy approval"], correct: 1 },
+            { q: "If a \"No Match on Scan\" error occurs during administration, what should be the nurse's first action?", a: ["Administer the drug anyway", "Discard the initial scan and re-verify the order", "Manual override immediately", "Type the drug name manually"], correct: 1 },
+            { q: "How do you add a new flowsheet that is not currently visible in the Flowsheet Selection?", a: ["Click the \"Add Parameter\" button", "Click the \"+\" (Plus) icon in the Flowsheet Selection panel", "Go to the \"Main Toolbar\"", "Right-click on an existing flowsheet"], correct: 1 },
+            { q: "Which assessment tool is specifically used to determine a patient's risk for falling in O-CIS?", a: ["NIHSS Stroke Scale", "Morse Fall Scale", "Glasgow Coma Scale", "Braden Scale"], correct: 1 },
+            { q: "For Inpatients, allergies must be reviewed by an MD within how many hours of admission?", a: ["2 hours", "4 hours", "8 hours", "24 hours"], correct: 2 },
+            { q: "What happens if documented allergies are not reviewed by an MD within the 8-hour window?", a: ["The patient is automatically discharged", "Entering of orders will not be allowed by the system", "The billing department is notified", "The nurse must re-enter the allergies"], correct: 1 },
+            { q: "In the results tab, Which icon in the EMR signifies an abnormal laboratory result?", a: ["Red exclamation point", "Red Flag", "Green Flag", "Yellow Flag"], correct: 3 },
+            { q: "Which environment provides \"Read-Only\" access to patient records during system downtime?", a: ["OCIS-PROD", "ROE", "CITRIX-TRAIN", "OCIS-TEST"], correct: 1 },
+            { q: "Which tab in the EMR allows users to view scanned documents such as loose documents/prescription?", a: ["Results", "Flowsheets", "Document Management", "Timeline"], correct: 2 },
+            { q: "According to policy, where should the \"SCANNED\" stamp be placed on physical documents?", a: ["Top right corner", "Center of the page", "Left lower portion", "Back of the document"], correct: 2 },
+            { q: "What is the paper-based form used for initial multidisciplinary assessments during system downtime?", a: ["Admission Note Nursing", "MIAD (Multi-Disciplinary Initial Assessment Database)", "Order Entry Worksheet", "Case Usage Form"], correct: 1 },
+            { q: "How do you access the St. Luke's Billing (SLB) system?", a: ["Through the O-CIS Main Toolbar", "Through the Allscripts Gateway", "Through the SLMC Enterprise Portal login", "Through a physical signature pad"], correct: 2 }
+        ],
+        basic: [
+            { q: "Which web portal address is used to access the St. Luke's O-CIS system?", a: ["http://ocis.stlukes.com.ph/", "http://portal.stlukes.com.ph/", "http://stlukes.citrix.com/", "http://emr.stlukes.com.ph/"], correct: 1 },
+            { q: "Which software application must be installed on your device to launch the O-CIS environment?", a: ["Adobe Reader", "Google Chrome", "Citrix Workspace/Receiver", "Microsoft Edge"], correct: 2 },
+            { q: "If Google Chrome or Citrix is not installed on your work device, whom should you contact?", a: ["Your Unit Manager", "The HR Department", "The IT Department at local 4206/5520", "The Healthcare Academy"], correct: 2 },
+            { q: "What credentials are required to log in to the St. Luke's Enterprise Portal?", a: ["Employee ID only", "Personal email and password", "Domain account (Username and Password)", "Citrix license key"], correct: 2 },
+            { q: "How can you add a preferred application (like OCIS-PROD) to your \"Home\" or \"Favorites\" tab in Citrix?", a: ["Right-click and select \"Add\"", "Highlight the star above the application", "Drag the icon to the desktop", "Contact IT for permissions"], correct: 1 },
+            { q: "Which of the following is NOT one of the core values of St. Luke’s Medical Center?", a: ["Integrity", "Profitability", "Accountability", "Teamwork"], correct: 1 },
+            { q: "In the Allscripts Gateway Toolbar, which icon is used to \"Suspend\" or lock the application for a short period?", a: ["Red power button", "Green question mark", "Purple crescent moon", "Blue eyeglasses"], correct: 2 },
+            { q: "Which icon in the Gateway Toolbar allows you to \"Shutdown\" (exit and close) the Sunrise application?", a: ["Suspend", "Red power button", "User Preferences", "Recently Viewed Patient"], correct: 1 },
+            { q: "Where can you set the default Sunrise application that opens automatically upon startup?", a: ["Main Toolbar", "Chart Tab-Level Toolbar", "User Preferences Settings (General Tab)", "Citrix Storefront"], correct: 2 },
+            { q: "What does the \"Recently Viewed Patient\" icon (represented by eyeglasses) allow you to do?", a: ["View the patient's insurance details", "View the recently viewed patient at the \"By Patient\" tab", "Check for new laboratory results", "Print a summary of the current shift"], correct: 1 },
+            { q: "What is the first step to find a specific patient visit in the system?", a: ["Click the \"Flowsheet\" icon", "Double-click the \"Find Visit\" icon", "Go to the \"Clinical Summary\" tab", "Open the \"Reports\" menu"], correct: 1 },
+            { q: "When searching for a patient in the \"Find Visit\" window, what information can you enter?", a: ["Last Name and Given Name", "MRN", "Visit Number", "All of the above"], correct: 3 },
+            { q: "International Patient Safety Goal #1 is to:", a: ["Improve effective communication", "Identify Patients Correctly", "Reduce the risk of falls", "Prevent healthcare-associated infections"], correct: 1 },
+            { q: "Which patient detail is included in the header information when a visit is selected?", a: ["Age and Gender", "Status (e.g., ADM)", "MRN/Visit Number", "All of the above"], correct: 3 },
+            { q: "If a patient is at risk for fall, what precaution will be displayed in the Patient Header?", a: ["\"Strict Bedrest\"", "\"Precautions: Fall\"", "\"High Alert\"", "\"NPO\""], correct: 1 },
+            { q: "Which tab serves as the nurse's hand-off tool worksheet during endorsement?", a: ["Orders Tab", "Results Tab", "Clinical Summary Tab", "Document Management Tab"], correct: 2 },
+            { q: "Which icon provides access to the Modified Fall Risk Assessment and Agreement?", a: ["Enter Document", "Enter Order", "Worklist Manager", "Flowsheet Manager"], correct: 0 },
+            { q: "Which assessment is specifically used to determine a patient's risk for fall within the Flowsheet Manager?", a: ["NIHSS Stroke Scale", "Morse Fall Scale", "Glasgow Coma Scale", "Braden Scale"], correct: 1 },
+            { q: "What does the acronym CLABSI stand for in the Bundles of Care documentation?", a: ["Clinical Laboratory System Integration", "Central Line Associated Bloodstream Infection", "Care Level and Basic System Info", "Critical Life and Bloodstream Intervention"], correct: 1 },
+            { q: "Which flowsheet bundle would you use for a patient on an artificial airway?", a: ["Fall Prevention", "Intake/Output", "Ventilator-Associated Pneumonia (VAP) Bundle", "Access Devices"], correct: 2 },
+            { q: "Where is the \"Print Reports\" icon located?", a: ["Within the Patient Info tab", "On the Main Toolbar", "Inside the Citrix Workspace launcher", "On the login screen"], correct: 1 },
+            { q: "To print a specific Clinical Document, what should you select as the \"Report Category\"?", a: ["Administrative", "Results", "Documents", "Patient Lists"], correct: 2 },
+            { q: "What is the purpose of the \"Preview\" button in the Report Selection window?", a: ["To finalize the document for the doctor", "To check the document before printing", "To edit the text of the report", "To save the report as a PDF"], correct: 1 },
+            { q: "Which report would you select to generate a PhilHealth claim form?", a: ["CF3 Report", "Transfer Note", "Discharge Summary", "Medical Certificate"], correct: 0 },
+            { q: "When printing laboratory results, what is the correct Report Category?", a: ["Documents", "Results", "Orders", "Administrative"], correct: 1 },
+            { q: "What does \"BCP\" stand for in the context of system downtime?", a: ["Basic Care Plan", "Billing and Collection Process", "Business Continuity Plan", "Backup Portal"], correct: 2 },
+            { q: "During system downtime, which environment provides \"Read-Only\" access to patient records?", a: ["OCIS-TEST", "ROE", "CITRIX-TRAIN", "SLB-DATA"], correct: 1 },
+            { q: "What is the paper-based form used for Admission Note Nursing during system downtime?", a: ["Medication Administration", "Multi-Disciplinary Initial Assessment Database", "Monthly Internal Audit Data", "Medical Inventory and Devices"], correct: 1 },
+            { q: "The MIAD Pediatric form is used for patients in what age range?", a: ["Birth to 28 days", "29 Days to 18 years and 364 days old", "19 years old and above", "Patients over 65 years old"], correct: 1 },
+            { q: "How do you access the St. Luke's Billing (SLB) system?", a: ["Through the O-CIS Main Toolbar", "Through the Allscripts Gateway", "Through the SLMC Enterprise Portal", "Through the Google Chrome search bar"], correct: 2 }
+        ],
+        acute: [
+            { q: "As a bedside nurse, I will access EMR using", a: ["Department of Pathology's COW/WOW", "the COW/WOW of the Nursing Unit where I am on duty", "any nursing unit's COW/WOW", "Any IT-approved devices"], correct: 1 },
+            { q: "If I forgot my EMR password, I should fill-out a System Access Request Form (SARF) and submit it to", a: ["IT USG", "my Nurse Unit Manager or Shift Manager", "HR Healthcare Academy", "Medical Informatics and Data Analytics"], correct: 0 },
+            { q: "Critical Values Which icon color and symbol represent an emergency value that needs immediate action?", a: ["Green checkmark", "Blue exclamation mark", "Red exclamation mark", "Solid green box"], correct: 2 },
+            { q: "Normal Values What does a Green Checkmark next to a vital sign mean?", a: ["The value is dangerously high", "The value is normal and has been verified", "The sensor is broken", "The doctor has not seen it yet"], correct: 1 },
+            { q: "In printing prescription, you must go to", a: ["Print Reports", "Prescription Writer", "Enter Document", "Enter Order"], correct: 0 },
+            { q: "Abnormal Values Which icon represents a value that is out of range but not a life-threatening emergency?", a: ["Blue exclamation mark", "Red exclamation mark", "Green checkmark", "Grey heart icon"], correct: 0 },
+            { q: "Which lab status is indicated by an icon featuring a pencil in the upper-left corner?", a: ["Received by Performing Unit", "Critical Value", "Pending Collection", "Final Results Reviewed"], correct: 2 },
+            { q: "What status does a green refresh or cycle arrow on a lab icon signify?", a: ["The specimen has been collected.", "The results are critical.", "The specimen is pending collection.", "The lab has received the specimen."], correct: 0 },
+            { q: "What is indicated when the refresh arrow on a lab icon is red?", a: ["Final results have been corrected.", "The specimen has been received by the lab unit.", "The specimen has not been collected for more than 29 minutes.", "The collection process is complete and successful."], correct: 2 },
+            { q: "Which status is represented by a blue refresh arrow on the lab icon?", a: ["Collected", "Pending Collection", "Critical Value", "Received by Performing Unit"], correct: 3 },
+            { q: "What does a blue checkmark on the lab icon indicate about the test results?", a: ["The specimen is still pending collection.", "The final results have been reviewed or corrected.", "The lab has just received the specimen.", "The results are critical and require immediate attention."], correct: 1 },
+            { q: "What does it mean if you see a red exclamation on tracking board", a: ["Specimen has not been collected for more than 24 hours", "Critical Value", "Received by Performing Unit", "Final result has been reviewed"], correct: 1 },
+            { q: "I will fill-out the Demographic data using", a: ["ALL CAPS", "Does not matter", "Title Caps", "lowercase letters"], correct: 0 },
+            { q: "If the patient does not have a middle name, I will type in", a: ["N/A", "-", "NA", "/"], correct: 1 },
+            { q: "When scheduling an inpatient procedure, I should", a: ["Use the \"Admitted/Arrived\" visit number", "Create a new visit", "None of the above", "Use the \"PreRegistered\" visit number"], correct: 0 },
+            { q: "Case confirmation is done", a: ["On the day of the procedure", "Four hours prior the procedure", "A week before the procedure", "The night prior the procedure"], correct: 3 },
+            { q: "Tagging of Surgical Time Markers are done", a: ["Once the OR Tech is needed", "In real-time", "Once the patient is in PACU", "After the procedure"], correct: 1 },
+            { q: "Which of the following Clinical Documents is NOT entered by the Nurse?", a: ["PreOp Note", "Admission Note Nursing", "PreOp Nursing Note", "Transfer Note"], correct: 0 },
+            { q: "During Admission from emergency room, once the patient arrives, the first thing to do in the EMR is", a: ["mark transfer as done in worklist manager", "change the Temporary Location of the patient to the designated room", "change the Assigned Location of the patient to the designated room", "add patient in my visit list"], correct: 2 },
+            { q: "The Nursing Unit can view patients for admission using the", a: ["Personalized Visit List", "Pending Incoming Visit List", "Incoming Patients Logbook", "Patient Flow"], correct: 1 },
+            { q: "In admitting a 19 year old patient, I should fill-out the", a: ["Admission Note Pediatric Nursing", "Admission Note Nursing", "Admission Note Newborn Nursing", "Admission Note Obstetric Nursing"], correct: 1 },
+            { q: "During Medication History Interview, when adding Home Medications for my patient, I should click", a: ["Prescription Writer", "Order Reconciliation", "Allergies Summary", "Add Item"], correct: 1 },
+            { q: "During history interview, when adding allergy information for my patient, should click", a: ["Order Reconciliation", "Allergies Summary", "Add Item", "Prescription Writer"], correct: 1 },
+            { q: "Infusion Pump worklist tasks are marked as done", a: ["Before End of Shift", "Before midnight", "Every hour", "Once performed"], correct: 1 },
+            { q: "Continuous oxygen therapy in worklist tasks are marked as done", a: ["Every end of shift", "Every midnight", "Every hour", "every start of shift"], correct: 0 },
+            { q: "POCT CBG in worklist manager are marked as done", a: ["Every shift", "After 8 hours", "Every hour", "When performed"], correct: 3 },
+            { q: "In cases of medication wastage, I can request for additional doses of medications by accomplishing the", a: ["Outpatient Medication Review", "Order Reconciliation", "Prescription Writer", "Order Message Manager"], correct: 3 },
+            { q: "Before administering the First Dose of a medication, the Charge Nurse should", a: ["Add a comment on the worklist manager indicating \"First Dose Checked\"", "Mark the task as done", "Enter his/her username and password to indicate First Dose Check", "administer the medication himself/herself"], correct: 0 },
+            { q: "I should reschedule medication doses", a: ["if instructed by the Charge Nurse", "There is no need to reschedule doses since they are automated", "If necessary after giving the first dose, or if current dose was given outside the time window.", "After giving each dose."], correct: 2 },
+            { q: "For a multidose vials, I will endorse the remaining contents of the vial by", a: ["adding a comment on the medication inside the worklist manager", "adding a comment on the flowsheets regarding the remaining dose", "verbally telling the next bedside nurse of the remaining dose", "adding a clinical document regarding the remaining dose"], correct: 0 },
+            { q: "A patient will be undergoing an appendectomy this afternoon. During the procedure, if the medication to be administered to the patient is from the general unit, you will use the KBMA to administer the medication, true or false?", a: ["FALSE", "TRUE"], correct: 1 },
+            { q: "The Request for Blood Pickup is activated via", a: ["the Worklist Manager", "the Orders Tab", "the Enter Order", "the KBMA"], correct: 1 },
+            { q: "Blood Transfusion reactions are documented using", a: ["Blood Transfusion Reaction Flowsheet", "Assessment and Cares", "Blood Transfusion Reaction Note", "Clinical Summary"], correct: 2 },
+            { q: "Plan of Care is accomplished", a: ["every hour", "every shift", "every problem occurence", "as necessary"], correct: 2 },
+            { q: "Your documentation/s as a Peri-Op Nurse is/are:", a: ["PreOp Nursing Note", "Intra-Op Record", "Surgery Case Details", "All of the Above"], correct: 3 },
+            { q: "This is where you list the used equipment or items used in the procedure in the Surgical Case List", a: ["Post-Op", "Case Usage", "Case Header", "Intra-Op"], correct: 1 },
+            { q: "I can add a new flowsheet in flowsheet criteria by clicking", a: ["Enter Document", "Create Referral", "Plus Sign", "Flowsheet Manager"], correct: 2 },
+            { q: "Critical Values are Documented using", a: ["Critical Results Notification", "Critical Value Flowsheet", "Critical Result Summary", "None of the above"], correct: 0 },
+            { q: "Order Reconciliation is done by the Physician", a: ["Every Patient Transfer due to a Change in Patient's Condition", "Every Patient Admission", "Every Patient Discharge", "All of the above"], correct: 3 },
+            { q: "The Discharge Order is placed by the", a: ["Attending Physician", "Referring Physician", "Co-manage Physician", "Attending Physician and all Referral MDs"], correct: 0 },
+            { q: "To create the Home Instructions, Nurse will enter the", a: ["Patient Instructions and Follow-up", "Referral Discharge Instructions", "Discharge Instructions, Inpatient", "MADPA"], correct: 2 },
+            { q: "The following is required prior to payment, except", a: ["CF2/CF4", "For Billing Discharge", "Ready for Billing", "Gate Pass", "OR Tech and PARES"], correct: 3 },
+            { q: "If iPro is unavailable, the anesthesiologist may opt to use _________ as BCP", a: ["PARES", "PreOp Nursing Note", "PAC", "Intake and Output Sheet"], correct: 0 },
+            { q: "This Document Allows me to request for an item, medication, or procedure during a system downtime", a: ["Credit Memo Request Note", "Doctor's Professional Fee Slip", "Turn-In Slip", "Patient Account Charge"], correct: 3 },
+            { q: "This is not retained as paper-based form", a: ["Newborn and Rooming-In Discharge Checklist", "CMRN", "Anesthesia Cart Checklist", "None of the above"], correct: 3 }
+        ],
+        shiftmanager: [
+            { q: "Which of the following is a primary responsibility of the Shift Manager regarding data protection?", a: ["Creating passwords for bedside nurses", "Sharing administrative passwords with secretaries", "Reporting suspected password compromises", "Storing passwords in unencrypted mobile files for quick access"], correct: 2 },
+            { q: "To gain EMR access, which form must be processed by the Shift Manager/Associate?", a: ["Systems Access Request Form (SARF)", "Medication Reconciliation Form", "Password Modification Sheet", "Patient Flow Request"], correct: 0 },
+            { q: "Regarding password security, Shift Managers are prohibited from:", a: ["Using non-English passphrases", "Using the \"Remember Password\" feature on web browsers", "Using multi-factor authentication", "Creating passwords with more than 14 characters"], correct: 1 },
+            { q: "Who has the primary responsibility for watching out for new available Critical Results on the Tracking Board?", a: ["The Bedside Nurse", "The unit's Charge Nurse or Shift Manager", "The Attending Physician", "The Pathology Department staff"], correct: 1 },
+            { q: "What must the Shift Manager do after relaying critical results to a physician?", a: ["Delete the Lab icon from the Tracking Board", "Print a paper copy for the patient’s chart", "Click \"Annotate\" and type the name of the informed physician", "Call the Pathology department to confirm receipt"], correct: 2 },
+            { q: "Which tool is used by the Shift Manager to monitor and manage tasks that need to be performed for a patient?", a: ["MD Portal", "Worklist Manager", "Clinical Summary", "Systems Access Request"], correct: 1 },
+            { q: "In the admission process for Direct Admissions, which department enters the \"Admit Patient\" order and assigns the bed?", a: ["Nursing Unit", "Admissions Department", "Medical Records", "Information Technology"], correct: 1 },
+            { q: "When transcribing admission orders, what is the role of the Nursing Unit?", a: ["Perform Admission Medication Reconciliation", "Transcribe orders with \"Standard Order Session Type\"", "Assign the patient's actual bed location", "Removal of ER MD tagging"], correct: 1 },
+            { q: "For multiple time-critical laboratory orders (e.g., CBC NOW), what is the correct responsibility?", a: ["Encode all repeat orders into the special instructions box", "Encode and submit each order separately with specific collection times", "Wait for the MD to encode all time-sensitive requests", "Combine all laboratory requests into a single order set"], correct: 1 },
+            { q: "What is the Shift Manager’s responsibility regarding Medication History collection?", a: ["Collect the history manually for every patient", "Ensure Bedside RNs have accomplished Admission Order Reconciliation", "Mark all medication history as \"Done\" immediately upon arrival", "Review documented allergies within 24 hours"], correct: 1 },
+            { q: "How long does the MD have to review allergies before the system prevents new orders from being entered?", a: ["2 hours", "4 hours", "8 hours", "12 hours"], correct: 2 },
+            { q: "When encoding admission orders, which task is specifically assigned to the Physician (MD)?", a: ["Documenting vital signs monitoring", "Recording isolation orders (e.g., Contact, Droplet)", "Marking allergies as \"Reviewed\"", "Printing door tags"], correct: 2 },
+            { q: "In the ER Admission process, what is the responsibility of the Nursing Unit?", a: ["Remove the ER MD from the system", "Change the \"Assigned Location\" once the patient arrives", "Phone endorsement to the Admissions department", "Enter the initial Admit Order"], correct: 1 },
+            { q: "In a Permanent Transfer (Trans-in/Trans-out), which unit is responsible for transferring the patient's location?", a: ["The Sending Unit", "The Receiving Unit", "The Admissions Department", "The Information Technology Group"], correct: 1 },
+            { q: "To perform a \"First Dose Check\" in EMR, where does the Shift Manager add the comment?", a: ["In the Orders Tab", "In the Worklist Manager", "In the Clinical Summary", "In the Patient Info Tab"], correct: 1 },
+            { q: "Whose account must be used when stamping a \"First Dose Check\" in the system?", a: ["The Nursing Unit Manager's account", "The Bedside Nurse's account", "The Charge Nurse/Shift Manager’s own account", "A generic unit account"], correct: 2 },
+            { q: "What is the Shift Manager's role during High Alert Medication administration?", a: ["Provide verbal consent", "Act as a witness and complete the Co-sign window", "Enter the initial medication order for the physician", "Schedule the task in the Worklist Manager only"], correct: 1 },
+            { q: "When a patient is NPO, the Shift Manager's role is to:", a: ["Delete all medication orders", "Suspend oral medications in the pre-operative phase", "Change the medication route to IV automatically", "Wait for the physician to reconcile the orders"], correct: 1 },
+            { q: "To cancel batching during the discharge workflow, medication suspension should be done:", a: ["After the patient is physically gone", "Before 1100H", "At the end of every shift", "Only if requested by Pharmacy"], correct: 1 },
+            { q: "What is the frequency for Shift Managers to mark pipe-in oxygen usage as \"done\" for auto-charging?", a: ["Every hour", "Once every 24 hours", "Every end of shift", "Only upon patient discharge"], correct: 2 },
+            { q: "Shift Managers check Pharmacy Issuance and Medication Returns through which tab?", a: ["Results", "Patient Info", "Clinical Summary", "Tracking Board"], correct: 2 },
+            { q: "Which EMR status removes a patient from the Tracking Board during discharge?", a: ["Ready for Billing", "Discharge Visit", "Pending Transactions", "Core Discharge"], correct: 1 },
+            { q: "If a patient is expired, the Shift Manager must transfer the patient's location to:", a: ["The lobby", "The admissions department", "Surgical Pathology", " \"Out on Pass\" status"], correct: 2 },
+            { q: "Who is responsible for reconciling discharge orders?", a: ["The Shift Manager for all orders", "The Billing Department", "Each specific service for the orders they requested", "The Nursing Unit Manager"], correct: 2 },
+            { q: "To extract all prescriptions for a patient during discharge, what should be entered in the Selection Criteria?", a: ["THE DOCTOR'S NAME", "THE PATIENT'S PIN", " \"ALL\" ", " \"DISCHARGE\" "], correct: 2 },
+            { q: "If a patient has already settled their account but remains in the unit due to sudden change in clinical status, the Shift Manager should:", a: ["Keep the discharge visit as is", "Cancel the Discharge Visit through \"Visit Maintenance\"", "Physically move the patient to the lobby", "Re-admit the patient through the ER"], correct: 1 },
+            { q: "What tool is used to request housekeeping or medical equipment repair?", a: ["Worklist Manager", "Patient Flow", "Tracking Board", "CEAC"], correct: 1 },
+            { q: "What is the standard Shift Manager responsibility regarding the Hand-off Process?", a: ["Relaying complete and up-to-date information interactively", "Recording information only via email", "Allowing interruptions to ensure bedside nurses are busy", "Using only the Tracking Board for endorsements"], correct: 0 },
+            { q: "Which department must be removing the ER MD tagging before a patient arrives at the unit?", a: ["Admissions Department", "Nursing Unit", "Emergency Department", "Billing Department"], correct: 2 },
+            { q: "Regarding \"Leave of Absence (Out on Pass),\" the Shift Manager must:", a: ["Discharge the patient completely", "Change the visit status to LOA", "Permanently transfer the patient to \"General\" scope", "Cancel all laboratory orders"], correct: 1 }
+        ],
+        discharge: [
+            { q: "A patient is medically cleared for discharge. According to the Routine Discharge Workflow, which specific document must the MD complete before the RN can proceed with their documentation?", a: ["The Gate Pass", "The PhilHealth CF4", "Physician Discharge Instructions", "The SLB Bill Clearance"], correct: 2 },
+            { q: "It is 11:30 AM and a Discharge Officer notices that a patient’s medications have not yet been suspended. Based on the protocol, what should have happened 30 minutes ago?", a: ["The patient should have left the room.", "The Gate Pass should have been printed.", "Meds should have been suspended (before 11 AM).", "The bill should have been settled."], correct: 2 },
+            { q: "During a routine check, you find a transaction listed as \"Pending\" in the SLB system. What is your next step?", a: ["Coordinate with the performing unit or escalate to IT to discontinue the order.", "Mark the transaction as \"Done\" immediately without calling anyone.", "Inform the patient they cannot be discharged for 24 hours.", "Ignore it and proceed to the \"Ready for Billing\" step."], correct: 0 },
+            { q: "A nurse needs to return unused supplies to the pharmacy. Which system workflow should be monitored in the Clinical Summary to track this?", a: ["The Gate Pass workflow", "Pharmacy EMR Turn-In Request", "Professional Fee Encoding", "HMO LOA coordination"], correct: 1 },
+            { q: "A patient is ready for discharge, but the Attending Physician has not encoded their Professional Fee (PF). What is your first course of action?", a: ["Use the \"PF Contingency\" tool immediately.", "Coordinate with the MD to place the PF through their MDPF.", "Discharge the patient without the fee.", "Ask the patient how much they think the doctor should charge."], correct: 1 },
+            { q: "You are preparing to tag a patient as \"Ready for Billing\" in O-CIS. What will this action do to the patient’s chart?", a: ["It automatically settles the bill.", "It stops further orders from being entered in the chart.", "It prints the CF4 report.", "It notifies the hospital porters."], correct: 1 },
+            { q: "You need to leave your station for a 15-minute break but want to keep O-CIS open. Which icon on the toolbar should you use?", a: ["Shutdown (Power icon)", "Suspend (Moon icon)", "User Preferences (Wrench icon)", "Refresh (Circular arrow)"], correct: 1 },
+            { q: "While using O-CIS, you want to set your sidebar to be hidden by default every time you log in. Where can you find this setting?", a: ["Patient Info Tab", "User Preferences Settings (General tab)", "Clinical Summary", "Document Management"], correct: 1 },
+            { q: "You are looking for a specific patient who has a discharge order. Which parameter should you add to your Visit List to find them quickly?", a: ["Admitting Diagnosis", "Order Selection Filter (e.g., \"Discharge Patient\")", "Patient's Weight", "Hospital Accreditations"], correct: 1 },
+            { q: "You click on a patient’s name in O-CIS and want to see their birthdate, weight, and account class immediately. Which section of the screen provides this?", a: ["Tracking Board", "Patient Header", "Sidebar", "Menu Bar"], correct: 1 },
+            { q: "You are done with your shift and need to log off. The system reminds you to \"save data in any applications\" before proceeding. Which icon are you about to click?", a: ["Suspend", "Help", "Shutdown", "Refresh"], correct: 2 },
+            { q: "A Discharge Officer is checking the CF4 for completeness. They notice the \"History of Present Illness\" is missing. Which document should they check to find this data?", a: ["Problem Manager", "Delivery Record", "Physician Discharge Summary", "Laboratory Results"], correct: 2 },
+            { q: "You attempt to print a CF4, but an alert says \"No existing document.\" What does this mean?", a: ["The Physician Discharge Summary has not been created yet.", "The printer is out of paper.", "The patient does not have PhilHealth.", "The patient has not settled their bill."], correct: 0 },
+            { q: "You are auditing a chart and need to know exactly which user printed the CF4 and at what time. Where do you find this?", a: ["Timeline tab", "Document Management section", "Patient Info tab > Significant Event (Entered Date/User)", "Order Entry Worksheet"], correct: 2 },
+            { q: "A patient has expired. Which specific document must be checked for completeness before proceeding with discharge service?", a: ["Discharge Instructions", "Notice of Death", "Home Medication Prescription", "CF3 Report"], correct: 1 },
+            { q: "You are about to print a CF3 report for an OB-GYN patient. Which document is specifically required for this claim form?", a: ["CF4 Preview", "Delivery Record", "Medication Administration History", "Gate Pass"], correct: 1 },
+            { q: "You see an alert: \"Document is final but there is no ACTIVE Admitting Diagnosis.\" What tool should you use to fix this?", a: ["Workflow Management", "Problem Manager", "SLB Search", "Citrix StoreFront"], correct: 1 },
+            { q: "You are in the SLB system and need to check for \"Zero Priced\" items for a patient. Which module should you enter?", a: ["Charges Entry, Adjustment And Cancellation (CEAC)", "Item Price Inquiry", "Nursing Special Units", "User Profile"], correct: 0 },
+            { q: "A patient’s discharge is stalled because the account has an \"Invalid Transaction.\" What is a common reason for this according to the manual?", a: ["The doctor’s PF is too high.", "Orderable items in O-CIS are not aligned with the SLB database.", "The patient forgot their PIN.", "The Gate Pass has already been printed."], correct: 1 },
+            { q: "You are searching for a patient in SLB but only have their MRN. Where do you enter this?", a: ["PIN/Patient's Lastname field", "Action drop-down", "More Options", "Unit Selection"], correct: 0 },
+            { q: "You attempt to click \"For Billing Discharge\" in SLB, but the system prevents you from proceeding. What is the most likely cause?", a: ["The patient is already discharged.", "The Attending Physician is on leave.", "The patient's account has pending or invalid transactions.", "The patient's age is over 60."], correct: 2 },
+            { q: "A \"Zero Priced - SP\" transaction is found. What is your instruction for follow-up?", a: ["Coordinate with the Requesting unit.", "Call the IT Department to enter a price.", "Manually enter a price of 100 pesos.", "Cancel the order immediately."], correct: 0 },
+            { q: "You are encoding a Professional Fee on behalf of an MD who is currently performing an operation and cannot access the system. Which reason should you select in SLB?", a: ["Doctor is Driving", "Doctor Inside Airplane", "Doctor is currently Performing Operation", "Doctor Forgot Password"], correct: 2 },
+            { q: "A Consultant is in the middle of a meeting and asks you to enter their PF for them. According to the manual, when is it appropriate to use \"PF Contingency\"?", a: ["Anytime an MD asks you to.", "Only as a last resort after confirming the MD is unable to enter it.", "Only if the amount is less than 5,000 pesos.", "Never; staff are not allowed to enter PF."], correct: 1 },
+            { q: "You are encoding PF under contingency and received the instructions via a text message. What should you select for \"Manner of Instruction\"?", a: ["Telephone", "SMS", "Email", "Face-to-Face"], correct: 1 },
+            { q: "You look at the Tracking Board and see a GREEN flag under the \"SLB Bill Cleared\" column. What does this tell you?", a: ["The bill has been settled in Billing.", "The MD has signed the summary.", "The patient has allergies.", "The chart is ready for a new order."], correct: 0 },
+            { q: "You click \"Discharge\" in the Visit Discharge window. What happens automatically next?", a: ["The patient's room is marked as \"Clean.\"", "O-CIS closes.", "The system generates the Gate Pass.", "The patient's insurance claim is approved."], correct: 2 },
+            { q: "A family member lost their printed Gate Pass while heading to the exit. How do you reprint it?", a: ["Use the \"Print Reports\" button on the toolbar.", "Go to Patient Info > Significant Event and select \"Print Gatepass.\"", "Re-order the discharge.", "You cannot reprint a Gate Pass."], correct: 1 },
+            { q: "The patient has physically left the hospital with their Gate Pass. What is the final manual step to clear the system tracking?", a: ["Delete the patient's ID.", "Log out of O-CIS.", "Right-click on the patient and remove them from the tracking board.", "Refresh the screen."], correct: 2 }
+        ]
+    };
+
+    function showScreen(id) {
+        ['screenStart', 'screenDetails', 'screenBriefing', 'screenQuiz', 'screenResult'].forEach(s => document.getElementById(s).style.display = 'none');
+        document.getElementById(id).style.display = 'flex';
+    }
+
+    function validateDetails() {
+        const val = document.getElementById('playerNum').value;
+        const modKey = document.getElementById('trainingModule').value;
+        if (!val) { alert("Enter employee number"); return; }
+        playerIDValue = val;
+        hudPlayerID.innerText = "ID: " + val;
+        hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
+        currentQuestionSet = allQuestions[modKey];
+        storyPart = 0; showStoryPart(); showScreen('screenBriefing');
+    }
+
+    function showStoryPart() {
+        const texts = getBriefingText();
+        document.getElementById('storyContent').innerHTML = texts[storyPart];
+        document.getElementById('storyBtn').innerText = storyPart === texts.length - 1 ? "🚀 DEPLOY AMBO" : "NEXT";
+    }
+
+    function nextStory() {
+        const texts = getBriefingText();
+        if (storyPart < texts.length - 1) { storyPart++; showStoryPart(); } 
+        else { mainOverlay.style.display = 'none'; isPaused = false; gameStarted = true; }
+    }
+
+    function triggerCheckpoint() {
+        inQuiz = true; isPaused = true; batchCount = 0;
+        mainOverlay.style.display = 'flex'; showScreen('screenQuiz'); showQuestion();
+    }
+
+    function showQuestion() {
+        if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; resumeGame(); return; }
+        firstAttemptAtThisQuestion = true;
+        const q = currentQuestionSet[currentQuestionIndex];
+        document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Q${currentQuestionIndex + 1}: ${q.q}`;
+        const container = document.getElementById('optionsContainer'); container.innerHTML = '';
+        q.a.forEach((opt, i) => {
+            const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
+            btn.onclick = () => handleAnswer(i); container.appendChild(btn);
+        });
+    }
+
+function handleAnswer(idx) {
+        const qData = currentQuestionSet[currentQuestionIndex];
+        const isCorrect = (idx === qData.correct);
+
+        // This records every click!
+        questionLogs.push({
+            qText: qData.q,
+            status: isCorrect ? "CORRECT" : "WRONG",
+            choice: qData.a[idx]
+        });
+
+        if (isCorrect) {
+            if (firstAttemptAtThisQuestion) { syncScore++; }
+            feedbackMsg.innerText = "✓ DATA VALIDATED"; feedbackMsg.className = "correct";
+            feedbackMsg.style.display = "block";
+            stability = Math.round((syncScore / currentQuestionSet.length) * 100);
+            stabText.innerText = stability;
+            currentQuestionIndex++; batchCount++;
+            setTimeout(() => {
+                feedbackMsg.style.display = "none";
+                if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) showQuestion();
+                else resumeGame();
+            }, 800);
+        } else {
+            if (firstAttemptAtThisQuestion) {
+                firstAttemptAtThisQuestion = false;
+                stability = Math.round((syncScore / currentQuestionSet.length) * 100);
+                stabText.innerText = stability;
+            }
+            feedbackMsg.innerText = "✗ SYSTEM LOCK: MISMATCH DETECTED"; feedbackMsg.className = "wrong";
+            feedbackMsg.style.display = "block";
+        }
+    }
+
+    function resumeGame() {
+        inQuiz = false; isPaused = false; mainOverlay.style.display = 'none';
+        nextMilestone += 1000;
+        if (currentQuestionIndex >= currentQuestionSet.length) arriving = true;
+    }
+
+    function processValidation() {
+        const modKey = document.getElementById('trainingModule').value;
+        const siteKey = document.getElementById('playerSite').value.includes("Quezon") ? "QC" : "GC";
+        const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const completionCode = `${modKey.substring(0,3).toUpperCase()}-${stability}-${syncScore}-${playerIDValue}-${randomHex}`;
+        
+        // This packages the "Mistakes List" to send to Google
+        const logData = encodeURIComponent(JSON.stringify(questionLogs));
+
+        const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxeE_vL4yLQCP8mR8NJXGqcOjljoGG6l-HHsvRh6dTA0z48N7cYx8iETRbBv5iFG31d3w/exec"; 
+        const params = new URLSearchParams({ 
+            code: completionCode, id: playerIDValue, site: siteKey, 
+            stab: stability, sync: syncScore, total: currentQuestionSet.length, 
+            mod: modKey, logs: logData 
+        });
+        window.open(`${scriptURL}?${params.toString()}`, '_blank');
+    }
+
+    function drawAmbulance() {
+        let light = (Math.floor(Date.now()/200)%2) ? '#ff3e3e' : '#00d4ff';
+        ctx.fillStyle = light; ctx.fillRect(ambulance.x+6, ambulance.y-6, 24, 6);
+        ctx.fillStyle = '#fff'; ctx.fillRect(ambulance.x, ambulance.y, ambulance.w, ambulance.h);
+        ctx.fillStyle = '#ff3e3e'; ctx.fillRect(ambulance.x, ambulance.y+35, ambulance.w, 12);
+        ctx.fillStyle = '#333'; ctx.fillRect(ambulance.x+4, ambulance.y+8, ambulance.w-8, 20);
+    }
+
+    function drawCar(car) {
+        ctx.fillStyle = car.color; ctx.fillRect(car.x, car.y, car.w, car.h);
+        ctx.fillStyle = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
+        ctx.fillStyle = '#fff'; ctx.fillRect(car.x+4, car.y+car.h-6, 4, 3); ctx.fillRect(car.x+car.w-8, car.y+car.h-6, 4, 3);
+    }
+
+    function drawHospital() {
+        ctx.fillStyle = '#f0f0f0'; ctx.fillRect(10, hospitalY, 340, 500);
+        ctx.fillStyle = '#333'; ctx.fillRect(10, hospitalY, 340, 15);
+        ctx.fillStyle = '#004a99'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText("ST. LUKE'S MEDICAL CENTER", 180, hospitalY + 45);
+        ctx.fillStyle = 'white'; ctx.fillRect(160, hospitalY + 65, 40, 40);
+        ctx.fillStyle = 'red'; ctx.fillRect(175, hospitalY + 70, 10, 30); ctx.fillRect(165, hospitalY + 80, 30, 10);
+        ctx.fillStyle = '#add8e6';
+        for(let r=0; r<5; r++) for(let c=0; c<4; c++) ctx.fillRect(40 + (c*80), hospitalY + 130 + (r*75), 40, 35);
+    }
+
+    function update() {
+        if (isPaused || !gameStarted || inQuiz) return;
+        if (arriving) {
+            traffic = [];
+            if (hospitalY < 20) { hospitalY += 3; roadOffset += 4; } 
+            else {
+                if (ambulance.y > 450) { ambulance.y -= 1.5; } 
+                else {
+                    isPaused = true;
+                    document.getElementById('finalStability').innerText = stability + "%";
+                    document.getElementById('finalSync').innerText = `${syncScore}/${currentQuestionSet.length}`;
+                    document.getElementById('finalPlayerDisplay').innerText = "PLAYER ID: " + playerIDValue;
+                    showScreen('screenResult');
+                    mainOverlay.style.display = 'flex';
+                }
+            }
+        } else {
+            if (keys['ArrowLeft'] && ambulance.x > 15) ambulance.x -= ambulance.speed;
+            if (keys['ArrowRight'] && ambulance.x < canvas.width - ambulance.w - 15) ambulance.x += ambulance.speed;
+            distance += 4; roadOffset += 12;
+            if (distance >= nextMilestone && currentQuestionIndex < currentQuestionSet.length) triggerCheckpoint();
+            spawnTimer++;
+            if (spawnTimer > 40) {
+                const colors = ['#f39c12', '#8e44ad', '#27ae60', '#d35400'];
+                traffic.push({ x: Math.random()*(canvas.width-50) + 10, y: -100, w: 34, h: 65, speed: 5 + Math.random()*2, color: colors[Math.floor(Math.random()*4)] });
+                spawnTimer = 0;
+            }
+            for (let i = traffic.length-1; i >= 0; i--) {
+                traffic[i].y += traffic[i].speed;
+                if (ambulance.x < traffic[i].x + traffic[i].w && ambulance.x + ambulance.w > traffic[i].x && ambulance.y < traffic[i].y + traffic[i].h && ambulance.y + ambulance.h > traffic[i].y) {
+                    distance = Math.max(0, distance - 100); traffic.splice(i, 1);
+                } else if (traffic[i].y > canvas.height) traffic.splice(i, 1);
+            }
+        }
+        distText.innerText = Math.floor(distance);
+        progBar.style.width = (currentQuestionIndex / currentQuestionSet.length * 100) + "%";
+    }
+
+    function draw() {
+        ctx.clearRect(0,0, canvas.width, canvas.height); ctx.fillStyle = '#222'; ctx.fillRect(0,0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#f1c40f'; ctx.setLineDash([40, 40]); ctx.lineDashOffset = -roadOffset; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
+        if (arriving) drawHospital();
+        traffic.forEach(drawCar); drawAmbulance();
+        requestAnimationFrame(draw);
+    }
+    setInterval(update, 1000/60); draw();
+</script>
+</body>
+</html>
