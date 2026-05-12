@@ -215,8 +215,6 @@
     let nextMilestone = 1000, firstAttemptAtThisQuestion = true;
     let playerIDValue = "";
     let currentQuestionSet = [];
-    
-    // Memory for analytics
     let questionLogs = []; 
 
     const ambulance = { x: 162, y: 480, w: 36, h: 70, speed: 7 };
@@ -545,7 +543,7 @@
         const qData = currentQuestionSet[currentQuestionIndex];
         const isCorrect = (idx === qData.correct);
 
-        // Record the attempt for analytics
+        // Capture data for trainer analytics
         questionLogs.push({
             qText: qData.q,
             status: isCorrect ? "CORRECT" : "WRONG",
@@ -596,14 +594,20 @@
         const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
         const completionCode = `${modKey.substring(0,3).toUpperCase()}-${stability}-${syncScore}-${playerIDValue}-${randomHex}`;
         
-        // Packages the Mistakes List to send to Google
+        // Prepare the logs for the Apps Script
         const logData = encodeURIComponent(JSON.stringify(questionLogs));
 
+        // Note: Update this URL with your published Apps Script Web App URL
         const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxeE_vL4yLQCP8mR8NJXGqcOjljoGG6l-HHsvRh6dTA0z48N7cYx8iETRbBv5iFG31d3w/exec"; 
         const params = new URLSearchParams({ 
-            code: completionCode, id: playerIDValue, site: siteKey, 
-            stab: stability, sync: syncScore, total: currentQuestionSet.length, 
-            mod: modKey, logs: logData 
+            code: completionCode, 
+            id: playerIDValue, 
+            site: siteKey, 
+            stab: stability, 
+            sync: syncScore, 
+            total: currentQuestionSet.length, 
+            mod: modKey, 
+            logs: logData 
         });
         window.open(`${scriptURL}?${params.toString()}`, '_blank');
     }
