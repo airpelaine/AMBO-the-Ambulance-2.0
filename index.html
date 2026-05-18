@@ -164,6 +164,7 @@
             {q:"Abnormal Values Which icon represents a value that is out of range but not a life-threatening emergency?",a:["Blue exclamation mark","Red exclamation mark","Green checkmark","Grey heart icon"],correct:0},
             {q:"Which lab status is indicated by an icon featuring a pencil in the upper-left corner?",a:["Received by Performing Unit","Critical Value","Pending Collection","Final Results Reviewed"],correct:2},
             {q:"What status does a green refresh or cycle arrow on a lab icon signify?",a:["The specimen has been collected.","The results are critical.","The specimen is pending collection.","The lab has received the specimen."],correct:0},
+            {q:"What status does a green refresh or cycle arrow on a lab icon signify?",a:["The specimen has been collected.","The results are critical.","The specimen is pending collection.","The lab has received the specimen."],correct:0},
             {q:"What is indicated when the refresh arrow on a lab icon is red?",a:["Final results have been corrected.","The specimen has been received by the lab unit.","The specimen has not been collected for more than 29 minutes.","The collection process is complete and successful."],correct:2},
             {q:"Which status is represented by a blue refresh arrow on the lab icon?",a:["Collected","Pending Collection","Critical Value","Received by Performing Unit"],correct:3},
             {q:"What does a blue checkmark on the lab icon indicate about the test results?",a:["The specimen is still pending collection.","The final results have been reviewed or corrected.","The lab has just received the specimen.","The results are critical and require immediate attention."],correct:1},
@@ -299,7 +300,7 @@
         const siteKey = document.getElementById('playerSite').value;
         const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
         
-        // FIXED: Generating completionCode cleanly from locked scopes to ensure zeroing variables never bypass string compilation
+        // Formats verification token code layout: Prefix-Percentage-RawScore-EmployeeNo-HEX
         const prefix = modKey.substring(0,3).toUpperCase();
         const completionCode = `${prefix}-${finalLoggedStability}-${finalLoggedSyncScore}-${playerIDValue}-${randomHex}`;
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
@@ -308,38 +309,27 @@
             if (!questionLogs[i]) questionLogs[i] = "UNANSWERED";
         }
 
+        // IMPORTANT: Replace this placeholder link with your exact live script link inside your browser address box!
         const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxAgHDs6j_KUFhmzcdd1Xhu6JCuk4XYiPVL0XihXJtJtWv3UrMffbok40QYHt9INsJwEw/exec"; 
-        const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLSfWkH2EVkfohbVm_mIADmTVHgaQ_sdzUT_dBIIUb57agc/viewform";
+        
+        // Exact long viewer address pattern target
+        const longFormPublicURL = "https://docs.google.com/forms/d/e/1FAIpQLSfWkH2EVkfohbVm_mIADmTVHgaQ_sdzUT_dBIIUb57agc/viewform";
         
         const employeeIDEntry = "entry.1802927237";     
         const verificationCodeEntry = "entry.556276856"; 
-        const finalFormRedirectDestination = `${formBaseURL}?${employeeIDEntry}=${playerIDValue}&${verificationCodeEntry}=${encodeURIComponent(completionCode)}`;
+        const finalFormRedirectDestination = `${longFormPublicURL}?${employeeIDEntry}=${playerIDValue}&${verificationCodeEntry}=${encodeURIComponent(completionCode)}`;
 
-        // FIXED: Replaced standard unmanaged background fetch thread with a native invisible form POST submission bypass
-        const hiddenForm = document.createElement("form");
-        hiddenForm.method = "POST";
-        hiddenForm.action = scriptURL;
-        hiddenForm.style.display = "none";
+        // FIXED: Using a safe image ping request to deliver the parameters instantly to your sheet database cells
+        const dataPacketString = encodeURIComponent(JSON.stringify(questionLogs));
+        const finalSheetHandshakeURL = `${scriptURL}?code=${completionCode}&id=${playerIDValue}&site=${siteKey}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}&mod=${modKey}&logs=${dataPacketString}`;
 
-        const payloadField = document.createElement("input");
-        payloadField.type = "hidden";
-        payloadField.name = "payload";
-        payloadField.value = JSON.stringify({ code: completionCode, id: playerIDValue, site: siteKey, stab: finalLoggedStability, sync: finalLoggedSyncScore, total: currentQuestionSet.length, mod: modKey, logs: questionLogs });
-        
-        hiddenForm.appendChild(payloadField);
-        document.body.appendChild(hiddenForm);
+        const networkCarrierPing = new Image();
+        networkCarrierPing.src = finalSheetHandshakeURL;
 
-        try {
-            // Fires native background channel submission matrix
-            hiddenForm.submit();
-        } catch(e) {
-            console.warn("Bypass catch pipeline activated: ", e);
-        }
-
-        // Instantly executes form redirection handling safely without hitting scriptHandshake blocks
+        // FIXED: Safe, instant page redirection straight to your pre-filled Form boxes
         setTimeout(() => {
             window.location.href = finalFormRedirectDestination;
-        }, 400);
+        }, 350);
     }
 
     // --- GAME ENGINE ---
