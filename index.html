@@ -95,7 +95,7 @@
     let isPaused = true, inQuiz = false, gameStarted = false, arriving = false;
     let roadOffset = 0, spawnTimer = 0, hospitalY = -600, nextMilestone = 1000, firstAttempt = true, batchCount = 0;
     let playerIDValue = "", currentQuestionSet = [], questionLogs = [], storyPart = 0;
-    let finalLoggedStability = 0, finalLoggedSyncScore = 0; // Fixed score parameters persistence anchors
+    let finalLoggedStability = 0, finalLoggedSyncScore = 0; 
 
     const ambulance = { x: 162, y: 480, w: 36, h: 70, speed: 7 };
     let traffic = []; const keys = {};
@@ -142,7 +142,7 @@
             {q:"I should reschedule medication doses",a:["if instructed by the Charge Nurse","There is no need to reschedule doses since they are automated","If necessary after giving the first dose, or if current dose was given outside the time window.","After giving each dose."],correct:2},
             {q:"For a multidose vials, I will endorse the remaining contents of the vial by",a:["adding a comment on the medication inside the worklist manager","adding a comment on the flowsheets regarding the remaining dose","verbally telling the next bedside nurse of the remaining dose","adding a clinical document regarding the remaining dose"],correct:0},
             {q:"A patient will be undergoing an appendectomy this afternoon. During the procedure, if the medication to be administered to the patient is from the general unit, you will use the KBMA to administer the medication, true or false?",a:["FALSE","TRUE"],correct:1},
-            {q:"The Request for Blood Blood Pickup is activated via",a:["the Worklist Manager","the Orders Tab","the Enter Order","the KBMA"],correct:1},
+            {q:"The Request for Blood Pickup is activated via",a:["the Worklist Manager","the Orders Tab","the Enter Order","the KBMA"],correct:1},
             {q:"Blood Transfusion reactions are documented using",a:["Blood Transfusion Reaction Flowsheet","Assessment and Cares","Blood Transfusion Reaction Note","Clinical Summary"],correct:2},
             {q:"Plan of Care is accomplished",a:["every hour","every shift","every problem occurrence","as necessary"],correct:2},
             {q:"I can add a new flowsheet in flowsheet criteria by clicking",a:["Enter Document","Create Referral","Plus Sign","Flowsheet Manager"],correct:2},
@@ -289,7 +289,6 @@
         nextMilestone += 1000;
         if (currentQuestionIndex >= currentQuestionSet.length) {
             arriving = true;
-            // FIXED: Lock final calculation metric values in independent variable scopes before final screen reset clears them
             finalLoggedStability = stability;
             finalLoggedSyncScore = syncScore;
         }
@@ -300,7 +299,6 @@
         const siteKey = document.getElementById('playerSite').value;
         const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
         
-        // FIXED: Generating completionCode from the locked global variable data states to ensure no zeroing loops happen
         const completionCode = `${modKey.substring(0,3).toUpperCase()}-${finalLoggedStability}-${finalLoggedSyncScore}-${playerIDValue}-${randomHex}`;
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
@@ -309,13 +307,12 @@
         }
 
         const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxAgHDs6j_KUFhmzcdd1Xhu6JCuk4XYiPVL0XihXJtJtWv3UrMffbok40QYHt9INsJwEw/exec"; 
-        const formBaseURL = "https://forms.gle/zg4xAuBysSWzxcFM9";
+        const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLSfWkH2EVkfohbVm_mIADmTVHgaQ_sdzUT_dBIIUb57agc/viewform";
         
         const employeeIDEntry = "entry.1802927237";     
         const verificationCodeEntry = "entry.556276856"; 
         const finalFormRedirectDestination = `${formBaseURL}?${employeeIDEntry}=${playerIDValue}&${verificationCodeEntry}=${encodeURIComponent(completionCode)}`;
 
-        // FIXED: Converted thread engine layout to synchronous Promise handling to run redirect ONLY after network transmission clears cleanly
         fetch(scriptURL, {
             method: "POST", mode: "no-cors",
             headers: { "Content-Type": "application/json" },
@@ -323,7 +320,7 @@
         }).then(() => {
             window.location.href = finalFormRedirectDestination;
         }).catch((err) => {
-            console.error("Background sync dropped, executing failover routing: ", err);
+            console.error("Redirect fallback activated: ", err);
             window.location.href = finalFormRedirectDestination;
         });
     }
