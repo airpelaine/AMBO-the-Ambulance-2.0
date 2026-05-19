@@ -85,6 +85,8 @@
     <button class="reset-btn" onclick="location.reload()">RESET SIMULATION</button>
 </div>
 
+<div id="trackingBufferChannel" style="display: none;"></div>
+
 <script>
     const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
     const distText = document.getElementById('dist'), stabText = document.getElementById('stabilityDisplay');
@@ -281,6 +283,14 @@
                 stabText.innerText = stability;
             }
             feedbackMsg.innerText = "✗ SYSTEM LOCK: MISMATCH DETECTED"; feedbackMsg.className = "wrong"; feedbackMsg.style.display = "block";
+            
+            // Advance index step even on wrong choices so documentation array alignments map matching keys accurately
+            currentQuestionIndex++; batchCount++;
+            setTimeout(() => {
+                feedbackMsg.style.display = "none";
+                if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) { showQuestion(); } 
+                else { resumeGame(); }
+            }, 1200);
         }
     }
 
@@ -294,12 +304,10 @@
         }
     }
 
-    // COMPLETE AND COMPILATION COMPLIANT FUNCTION BLOCK
     function processValidation() {
         const modKey = document.getElementById('trainingModule').value;
         const siteKey = document.getElementById('playerSite').value;
         
-        // UNIQUE FORM CODE GENERATION MATRIX: [Employee #]-[Percentage]-[Raw Score]
         const completionCode = `${playerIDValue}-${finalLoggedStability}-${finalLoggedSyncScore}`;
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
@@ -307,16 +315,14 @@
             if (!questionLogs[i]) questionLogs[i] = "UNANSWERED";
         }
 
-        // Active corporate Web App link destination inside your network scope profile
+        // Active production deployment script URL context
         const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxAgHDs6j_KUFhmzcdd1Xhu6JCuk4XYiPVL0XihXJtJtWv3UrMffbok40QYHt9INsJwEw/exec"; 
         const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLSc-dvkUhvSIdKnshEvGo3yyez1MriInICMbu0ndSbrMDHO34A/viewform";
         
-        // Form field identifier tags matching your target structure inputs cleanly
         const employeeIDEntry = "entry.1802927237";     
-        const verificationCodeEntry = "entry.556276856"; 
+        const verificationCodeEntry = "entry.556276856";  
         const finalFormRedirectDestination = `${formBaseURL}?${employeeIDEntry}=${playerIDValue}&${verificationCodeEntry}=${encodeURIComponent(completionCode)}`;
 
-        // Build decoupled data transmission carrier frame
         const hiddenForm = document.createElement("form");
         hiddenForm.method = "POST";
         hiddenForm.action = scriptURL;
@@ -340,11 +346,13 @@
         try {
             hiddenForm.submit();
         } catch(e) {
-            console.warn("Bypass trigger execution trace loop: ", e);
+            console.warn("Execution trace log buffer exception: ", e);
         }
 
-        // Direct web container navigation command loads the pre-filled layout target immediately
-        window.location.href = finalFormRedirectDestination;
+        // Execute structural viewport translation to the pre-filled target layout
+        setTimeout(() => {
+            window.location.href = finalFormRedirectDestination;
+        }, 300);
     }
 
     // --- GAME ENGINE ---
