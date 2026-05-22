@@ -148,8 +148,8 @@
             
             let scrubbedCells = processLine.map(v => v.replace(/^"|"$/g, '').trim());
             
-            // 🌟 Formats keys to lower-case and strip out spaces/underscores for fail-safe lookup matching
-            let moduleKey = scrubbedCells[0].toLowerCase().replace(/[\s_]/g, '');
+            // 🌟 Error-proofing transformation logic: strips casing, spacing, dashes, and underscores completely
+            let moduleKey = scrubbedCells[0].toLowerCase().replace(/[\s_\-]/g, '');
             
             let questionObj = {
                 q: scrubbedCells[1],
@@ -179,6 +179,7 @@
 
     function getBriefingText() { return [`"System online. <b>Hello, Pilot ${playerIDValue}!</b>"`,`"Avoid collisions! Every impact results in a <b>-100m deduction</b>."`,`"Only the <b>first choice</b> counts toward your Sync score."`,`"Keep the data stream stable. Deploying now..."`]; }
 
+    // Renders matching UI overlay frames safely
     function showScreen(id) {
         ['screenStart', 'screenDetails', 'screenBriefing', 'screenQuiz', 'screenLoading', 'screenResult'].forEach(s => document.getElementById(s).style.display = 'none');
         document.getElementById(id).style.display = 'flex';
@@ -192,12 +193,14 @@
         hudPlayerID.innerText = "ID: " + val;
         hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
         
-        // 🌟 Fail-safe match using the formatted string lookups method
-        let cleanedLookupKey = rawModKey.toLowerCase().replace(/[\s_]/g, '');
+        // 🌟 Strips spacing/formatting inside lookup targets to always hit the matching cloud matrix rows
+        let cleanedLookupKey = rawModKey.toLowerCase().replace(/[\s_\-]/g, '');
         currentQuestionSet = allQuestions[cleanedLookupKey] || [];
         
         if (currentQuestionSet.length === 0) {
-            alert(`Error: System could not match choice "${rawModKey}" with column data inside your Google Sheet.\n\nPlease ensure your sheet's column cell contains: "${rawModKey}"`);
+            // Detailed, dynamic debug readout listing available data keys found inside the loaded CSV
+            let capturedKeys = Object.keys(allQuestions).join(", ");
+            alert(`Error: System could not map key "${rawModKey}" to your sheet column.\n\nCleaned Key sent: "${cleanedLookupKey}"\nAvailable Keys in Sheet: [${capturedKeys}]\n\nPlease make sure your sheet's "module" column row matches one of these keywords exactly.`);
             return;
         }
         
