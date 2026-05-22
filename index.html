@@ -15,8 +15,9 @@
         #mainOverlay { position: absolute; top: 0px; left: 4%; right: 4%; bottom: 80px; background: rgba(10, 10, 10, 0.96); border: 2px solid var(--primary-blue); border-radius: 20px; display: flex; flex-direction: column; padding: 20px; z-index: 100; backdrop-filter: blur(8px); }
         .story-header { font-size: 18px; color: var(--emergency-red); font-weight: 900; text-align: center; margin-bottom: 10px; text-transform: uppercase; }
         .story-text { font-size: 13px; color: #eee; margin-bottom: 15px; line-height: 1.5; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary-blue); min-height: 80px; }
-        .option-btn { background: #252525; text-align: left; margin-bottom: 8px; padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid #444; width: 100%; color: white; cursor: pointer; }
+        .option-btn { background: #252525; text-align: left; margin-bottom: 8px; padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid #444; width: 100%; color: white; cursor: pointer; transition: background 0.2s; }
         .option-btn:hover { background: #333; }
+        .option-btn.disabled { opacity: 0.5; cursor: not-allowed; background: #151515; }
         #feedbackMsg { font-weight: bold; text-align: center; margin-bottom: 10px; font-size: 16px; display: none; padding: 8px; border-radius: 8px; }
         .correct { color: var(--success-green); background: rgba(39, 174, 96, 0.1); }
         .wrong { color: var(--emergency-red); background: rgba(255, 62, 62, 0.1); }
@@ -33,6 +34,11 @@
         .btn-green { background: var(--success-green); width: 100%; margin-top: 10px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
         .reset-btn { background: none; border: none; color: #666; margin-top: 10px; font-size: 11px; cursor: pointer; text-decoration: underline; font-weight: bold; }
         .result-data-box { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; padding: 15px; margin: 15px 0; width: 85%; }
+        
+        /* 🌟 Loading Icon Elements */
+        .spinner { border: 4px solid rgba(255,255,255,0.1); width: 42px; height: 42px; border-radius: 50%; border-left-color: var(--primary-blue); animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #countdownValue { font-size: 36px; font-weight: bold; color: var(--primary-blue); margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -79,7 +85,15 @@
             <div id="feedbackMsg"></div>
             <div id="qText" style="font-size: 14px; margin-bottom: 10px; font-weight: bold; line-height: 1.4;"></div>
             <div id="optionsContainer"></div>
+            <button id="quizNextBtn" class="game-btn btn-green" style="display: none; margin-top: 10px;" onclick="advanceQuizSequence()">CONTINUE TO NEXT QUESTION</button>
         </div>
+        
+        <div id="screenLoading" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
+            <div class="spinner"></div>
+            <div style="font-size: 14px; letter-spacing: 1px; color: #aaa; text-transform: uppercase;">Re-Engaging Guidance Stream</div>
+            <div id="countdownValue">5</div>
+        </div>
+
         <div id="screenResult" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
             <div class="story-header" style="color: var(--success-green); font-size: 22px;">MISSION ACCOMPLISHED!</div>
             <div class="result-data-box">
@@ -99,7 +113,6 @@
 <div id="trackingBufferChannel" style="display: none;"></div>
 
 <script>
-    // 🌟 LINKED TO YOUR EXACT CSV DIRECT DOWNLOAD LINK
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?output=csv";
 
     const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
@@ -169,7 +182,7 @@
     function getBriefingText() { return [`"System online. <b>Hello, Pilot ${playerIDValue}!</b>"`,`"Avoid collisions! Every impact results in a <b>-100m deduction</b>."`,`"Only the <b>first choice</b> counts toward your Sync score."`,`"Keep the data stream stable. Deploying now..."`]; }
 
     function showScreen(id) {
-        ['screenStart', 'screenDetails', 'screenBriefing', 'screenQuiz', 'screenResult'].forEach(s => document.getElementById(s).style.display = 'none');
+        ['screenStart', 'screenDetails', 'screenBriefing', 'screenQuiz', 'screenLoading', 'screenResult'].forEach(s => document.getElementById(s).style.display = 'none');
         document.getElementById(id).style.display = 'flex';
     }
 
@@ -210,18 +223,20 @@
     }
 
     function showQuestion() {
-        if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; resumeGame(); return; }
+        if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; runLoadingTimer(); return; }
         firstAttempt = true;
+        document.getElementById('quizNextBtn').style.display = "none"; 
+        
         const q = currentQuestionSet[currentQuestionIndex];
         document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Q${currentQuestionIndex + 1}: ${q.q}`;
         const container = document.getElementById('optionsContainer'); container.innerHTML = '';
         q.a.forEach((opt, i) => {
             const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
-            btn.onclick = () => handleAnswer(i); container.appendChild(btn);
+            btn.onclick = () => handleAnswer(i, btn); container.appendChild(btn);
         });
     }
 
-    function handleAnswer(idx) {
+    function handleAnswer(idx, clickedButton) {
         const qData = currentQuestionSet[currentQuestionIndex];
         const isCorrect = (idx === qData.correct);
 
@@ -235,12 +250,14 @@
             feedbackMsg.innerText = "✓ DATA VALIDATED"; feedbackMsg.className = "correct"; feedbackMsg.style.display = "block";
             stability = Math.round((syncScore / currentQuestionSet.length) * 100);
             stabText.innerText = stability;
-            currentQuestionIndex++; batchCount++;
-            setTimeout(() => {
-                feedbackMsg.style.display = "none";
-                if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) { showQuestion(); } 
-                else { resumeGame(); }
-            }, 800);
+            
+            // Disable remaining buttons to prevent duplicate inputs
+            const buttons = document.getElementById('optionsContainer').getElementsByTagName('button');
+            for(let btn of buttons) { btn.classList.add('disabled'); btn.onclick = null; }
+            clickedButton.style.background = "var(--success-green)";
+            
+            // 🌟 Reveal manual "Next Button" ONLY when selection matches the correct index key
+            document.getElementById('quizNextBtn').style.display = "block";
         } else {
             if (firstAttempt) {
                 firstAttempt = false;
@@ -248,24 +265,52 @@
                 stabText.innerText = stability;
             }
             feedbackMsg.innerText = "✗ SYSTEM LOCK: MISMATCH DETECTED"; feedbackMsg.className = "wrong"; feedbackMsg.style.display = "block";
-            
-            currentQuestionIndex++; batchCount++;
-            setTimeout(() => {
-                feedbackMsg.style.display = "none";
-                if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) { showQuestion(); } 
-                else { resumeGame(); }
-            }, 1200);
+            clickedButton.style.background = "var(--emergency-red)";
+            // 🌟 Note: Does NOT skip or clear. The player stays stuck here until they guess the correct answer!
+        }
+    }
+
+    function advanceQuizSequence() {
+        feedbackMsg.style.display = "none";
+        currentQuestionIndex++; batchCount++;
+        
+        if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) { 
+            showQuestion(); 
+        } else { 
+            resumeGame(); 
         }
     }
 
     function resumeGame() {
-        inQuiz = false; isPaused = false; mainOverlay.style.display = 'none';
-        nextMilestone += 1000;
+        inQuiz = false;
         if (currentQuestionIndex >= currentQuestionSet.length) {
             arriving = true;
             finalLoggedStability = stability;
             finalLoggedSyncScore = syncScore;
+            // Go straight to final scoreboard layout once total track lists clear out completely
+            mainOverlay.style.display = 'none'; isPaused = false;
+        } else {
+            // 🌟 Run the 5-Second countdown animation before letting them drive again
+            runLoadingTimer();
         }
+    }
+
+    // 🌟 5-Second Loading Intermission Countdown Core Function
+    function runLoadingTimer() {
+        showScreen('screenLoading');
+        let remainingSeconds = 5;
+        document.getElementById('countdownValue').innerText = remainingSeconds;
+        
+        let timerInterval = setInterval(() => {
+            remainingSeconds--;
+            document.getElementById('countdownValue').innerText = remainingSeconds;
+            
+            if(remainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                mainOverlay.style.display = 'none'; 
+                isPaused = false; 
+            }
+        }, 1000);
     }
 
     function processValidation() {
@@ -280,7 +325,6 @@
             if (!firstChoiceLogs[i]) firstChoiceLogs[i] = "UNANSWERED";
         }
 
-        // 🌟 LINKED TO YOUR NEW APPSCRIPT DEPLOYMENT URL
         const scriptURL = "https://script.google.com/macros/s/AKfycby1fTqUYJRejskY7D6V1-VIZFmjjkqOqToi77Ef4p_PT2BE-6BgwtAfDaWO60Do7WKD/exec"; 
         
         const hiddenForm = document.createElement("form");
@@ -313,11 +357,7 @@
         trackingBufferChannel.appendChild(backgroundPortalReceiver);
         trackingBufferChannel.appendChild(hiddenForm);
 
-        try {
-            hiddenForm.submit();
-        } catch(e) {
-            console.warn("Execution trace exception: ", e);
-        }
+        try { hiddenForm.submit(); } catch(e) { console.warn("Execution trace exception: ", e); }
 
         setTimeout(() => {
             window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}`;
