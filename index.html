@@ -99,7 +99,8 @@
 <div id="trackingBufferChannel" style="display: none;"></div>
 
 <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTzjm0AjZV74CyEmx3auxUlEARGuluvz2kySE5yrsZ0tnHxavfe4KIoZw-nGxytJ-AUDrQWkeqnhR3U/pub?gid=17782444&single=true&output=csv";
+    // 🌟 LINKED TO YOUR EXACT CSV DIRECT DOWNLOAD LINK
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?output=csv";
 
     const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
     const distText = document.getElementById('dist'), stabText = document.getElementById('stabilityDisplay');
@@ -279,13 +280,9 @@
             if (!firstChoiceLogs[i]) firstChoiceLogs[i] = "UNANSWERED";
         }
 
-        const scriptURL = "https://script.google.com/a/macros/stlukes.com.ph/s/AKfycbxAgHDs6j_KUFhmzcdd1Xhu6JCuk4XYiPVL0XihXJtJtWv3UrMffbok40QYHt9INsJwEw/exec"; 
-        const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLSc-dvkUhvSIdKnshEvGo3yyez1MriInICMbu0ndSbrMDHO34A/viewform";
+        // 🌟 LINKED TO YOUR NEW APPSCRIPT DEPLOYMENT URL
+        const scriptURL = "https://script.google.com/macros/s/AKfycby1fTqUYJRejskY7D6V1-VIZFmjjkqOqToi77Ef4p_PT2BE-6BgwtAfDaWO60Do7WKD/exec"; 
         
-        const employeeIDEntry = "entry.1802927237";     
-        const verificationCodeEntry = "entry.556276856";  
-        const finalFormRedirectDestination = `${formBaseURL}?${employeeIDEntry}=${playerIDValue}&${verificationCodeEntry}=${encodeURIComponent(completionCode)}`;
-
         const hiddenForm = document.createElement("form");
         hiddenForm.method = "POST";
         hiddenForm.action = scriptURL;
@@ -319,11 +316,11 @@
         try {
             hiddenForm.submit();
         } catch(e) {
-            console.warn("Execution trace log buffer exception: ", e);
+            console.warn("Execution trace exception: ", e);
         }
 
         setTimeout(() => {
-            window.location.href = finalFormRedirectDestination;
+            window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}`;
         }, 400);
     }
 
