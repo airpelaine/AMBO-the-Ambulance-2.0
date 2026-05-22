@@ -60,11 +60,11 @@
             <div class="form-group">
                 <label>Training Module</label>
                 <select id="trainingModule">
+                    <option value="acute_care">Acute Care</option>
+                    <option value="acute_surgical">Acute/Surgical Care</option>
                     <option value="emergency">Emergency Care</option>
                     <option value="ambulatory">Ambulatory Care</option>
                     <option value="basic">Basic Navigation</option>
-                    <option value="acute_care">Acute Care</option>
-                    <option value="acute_surgical">Acute/Surgical Care</option>
                     <option value="shiftmanager">Shift Manager Roles</option>
                     <option value="discharge">Discharge Officer</option>
                 </select>
@@ -148,8 +148,8 @@
             
             let scrubbedCells = processLine.map(v => v.replace(/^"|"$/g, '').trim());
             
-            // 🌟 Error-proofing transformation logic: strips casing, spacing, dashes, and underscores completely
-            let moduleKey = scrubbedCells[0].toLowerCase().replace(/[\s_\-]/g, '');
+            // 🌟 Keeps original casing and underscores intact so it maps perfectly to your list items
+            let moduleKey = scrubbedCells[0].trim();
             
             let questionObj = {
                 q: scrubbedCells[1],
@@ -179,7 +179,6 @@
 
     function getBriefingText() { return [`"System online. <b>Hello, Pilot ${playerIDValue}!</b>"`,`"Avoid collisions! Every impact results in a <b>-100m deduction</b>."`,`"Only the <b>first choice</b> counts toward your Sync score."`,`"Keep the data stream stable. Deploying now..."`]; }
 
-    // Renders matching UI overlay frames safely
     function showScreen(id) {
         ['screenStart', 'screenDetails', 'screenBriefing', 'screenQuiz', 'screenLoading', 'screenResult'].forEach(s => document.getElementById(s).style.display = 'none');
         document.getElementById(id).style.display = 'flex';
@@ -187,20 +186,18 @@
 
     function validateDetails() {
         const val = document.getElementById('playerNum').value;
-        const rawModKey = document.getElementById('trainingModule').value;
+        const modKey = document.getElementById('trainingModule').value;
         if (!val) { alert("Enter employee number"); return; }
         playerIDValue = val;
         hudPlayerID.innerText = "ID: " + val;
         hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
         
-        // 🌟 Strips spacing/formatting inside lookup targets to always hit the matching cloud matrix rows
-        let cleanedLookupKey = rawModKey.toLowerCase().replace(/[\s_\-]/g, '');
-        currentQuestionSet = allQuestions[cleanedLookupKey] || [];
+        // 🌟 Direct tracking check matching exact string identifiers
+        currentQuestionSet = allQuestions[modKey] || [];
         
         if (currentQuestionSet.length === 0) {
-            // Detailed, dynamic debug readout listing available data keys found inside the loaded CSV
             let capturedKeys = Object.keys(allQuestions).join(", ");
-            alert(`Error: System could not map key "${rawModKey}" to your sheet column.\n\nCleaned Key sent: "${cleanedLookupKey}"\nAvailable Keys in Sheet: [${capturedKeys}]\n\nPlease make sure your sheet's "module" column row matches one of these keywords exactly.`);
+            alert(`Error: Matrix mismatch inside column layout.\n\nSelected module key: "${modKey}"\nAvailable keys found inside Google Sheet: [${capturedKeys}]\n\nPlease ensure your bottom-most left sheet tab data has identical keywords.`);
             return;
         }
         
