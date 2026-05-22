@@ -10,7 +10,7 @@
         .container { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 420px; margin-top: 60px; }
         canvas { background: #1a1a1a; border: 3px solid #333; border-radius: 16px; width: 92%; height: auto; box-shadow: 0 0 40px rgba(0,212,255,0.15); }
         .hud-header-tag { position: absolute; top: -50px; left: 4%; right: 4%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; background: rgba(30, 30, 30, 0.9); padding: 8px 12px; border-radius: 8px; border: 1px solid #444; }
-        .stats-bar { width: 92%; display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; font-weight: bold; }
+        .stats-bar { width: 92%; display: flex; justify-content: space-around; margin-bottom: 8px; font-size: 12px; font-weight: bold; }
         .stat-red { color: var(--emergency-red); } .stat-blue { color: var(--primary-blue); }
         #mainOverlay { position: absolute; top: 0px; left: 4%; right: 4%; bottom: 80px; background: rgba(10, 10, 10, 0.96); border: 2px solid var(--primary-blue); border-radius: 20px; display: flex; flex-direction: column; padding: 20px; z-index: 100; backdrop-filter: blur(8px); }
         .story-header { font-size: 18px; color: var(--emergency-red); font-weight: 900; text-align: center; margin-bottom: 10px; text-transform: uppercase; }
@@ -109,7 +109,8 @@
 <div id="trackingBufferChannel" style="display: none;"></div>
 
 <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?output=csv";
+    // 🌟 Explicit sheet target configuration to force Google to stream columns instead of generating blank buffers
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?gid=0&single=true&output=csv";
 
     const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
     const distText = document.getElementById('dist'), stabText = document.getElementById('stabilityDisplay');
@@ -137,19 +138,20 @@
     }
 
     function parseCloudCSV(text) {
+        // Fix row breaks for standard Google Sheets carriage returns
         const lines = text.split(/\r?\n/);
         const mappedData = {};
+        
         for (let i = 1; i < lines.length; i++) {
             let row = lines[i];
             if (!row.trim()) continue;
             
+            // Advanced RegEx splits row text safely by commas while completely ignoring commas wrapped inside quotes
             let processLine = row.match(/(".*?"|[^",\r\n]+)(?=\s*,|\s*$|\r|$)/g) || [];
             if(processLine.length < 7) continue;
             
             let scrubbedCells = processLine.map(v => v.replace(/^"|"$/g, '').trim());
-            
-            // 🌟 Keeps original casing and underscores intact so it maps perfectly to your list items
-            let moduleKey = scrubbedCells[0].trim();
+            let moduleKey = scrubbedCells[0].trim().toLowerCase();
             
             let questionObj = {
                 q: scrubbedCells[1],
@@ -169,8 +171,8 @@
 
     canvas.addEventListener('touchmove', (e) => {
         if (isPaused || arriving) return;
-        const rect = canvas.getBoundingClientRect();
-        const touchX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+        const canvasRect = canvas.getBoundingClientRect();
+        const touchX = (e.touches[0].clientX - canvasRect.left) * (canvas.width / canvasRect.width);
         ambulance.x = touchX - (ambulance.w / 2);
         if (ambulance.x < 15) ambulance.x = 15;
         if (ambulance.x > canvas.width - ambulance.w - 15) ambulance.x = canvas.width - ambulance.w - 15;
@@ -192,12 +194,13 @@
         hudPlayerID.innerText = "ID: " + val;
         hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
         
-        // 🌟 Direct tracking check matching exact string identifiers
-        currentQuestionSet = allQuestions[modKey] || [];
+        // 🌟 Strips formatting to evaluate exact lower-case arrays
+        let finalLookupKey = modKey.trim().toLowerCase();
+        currentQuestionSet = allQuestions[finalLookupKey] || [];
         
         if (currentQuestionSet.length === 0) {
-            let capturedKeys = Object.keys(allQuestions).join(", ");
-            alert(`Error: Matrix mismatch inside column layout.\n\nSelected module key: "${modKey}"\nAvailable keys found inside Google Sheet: [${capturedKeys}]\n\nPlease ensure your bottom-most left sheet tab data has identical keywords.`);
+            let capturedKeys = Object.keys(allQuestions).filter(Boolean).join(", ");
+            alert(`Error: Matrix mismatch inside column layout.\n\nSelected module key: "${modKey}"\nAvailable keys parsed from Sheet: [${capturedKeys}]\n\nPlease ensure your Google Sheet tab column cell strings match this identifier exactly.`);
             return;
         }
         
