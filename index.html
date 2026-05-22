@@ -175,6 +175,7 @@
         e.preventDefault();
     }, { passive: false });
 
+    // Header strings context mapping array vectors
     function getBriefingText() { return [`"System online. <b>Hello, Pilot ${playerIDValue}!</b>"`,`"Avoid collisions! Every impact results in a <b>-100m deduction</b>."`,`"Only the <b>first choice</b> counts toward your Sync score."`,`"Keep the data stream stable. Deploying now..."`]; }
 
     function showScreen(id) {
@@ -356,6 +357,7 @@
         try { hiddenForm.submit(); } catch(e) { console.warn("Execution trace exception: ", e); }
 
         setTimeout(() => {
+            // Forward directly to your AppScript portal container window 
             window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}`;
         }, 400);
     }
