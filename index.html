@@ -271,7 +271,6 @@
         feedbackMsg.style.display = "none";
         currentQuestionIndex++; batchCount++;
         
-        // Check if batch is completed OR if we've officially run through all questions
         if (currentQuestionIndex >= currentQuestionSet.length) {
             arriving = true;
             resumeGame();
@@ -391,7 +390,6 @@
             if (keys['ArrowRight'] && ambulance.x < canvas.width - ambulance.w - 15) ambulance.x += ambulance.speed;
             distance += 4; roadOffset += 12;
             
-            // Trigger quiz checkpoints every 1000m loop block
             if (distance >= nextMilestone && currentQuestionIndex < currentQuestionSet.length) {
                 nextMilestone += 1000;
                 triggerCheckpoint();
