@@ -34,8 +34,6 @@
         .btn-green { background: var(--success-green); width: 100%; margin-top: 10px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
         .reset-btn { background: none; border: none; color: #666; margin-top: 10px; font-size: 11px; cursor: pointer; text-decoration: underline; font-weight: bold; }
         .result-data-box { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; padding: 15px; margin: 15px 0; width: 85%; }
-        
-        /* 🌟 Loading Icon Elements */
         .spinner { border: 4px solid rgba(255,255,255,0.1); width: 42px; height: 42px; border-radius: 50%; border-left-color: var(--primary-blue); animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #countdownValue { font-size: 36px; font-weight: bold; color: var(--primary-blue); margin-top: 5px; }
@@ -87,13 +85,11 @@
             <div id="optionsContainer"></div>
             <button id="quizNextBtn" class="game-btn btn-green" style="display: none; margin-top: 10px;" onclick="advanceQuizSequence()">CONTINUE TO NEXT QUESTION</button>
         </div>
-        
         <div id="screenLoading" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
             <div class="spinner"></div>
             <div style="font-size: 14px; letter-spacing: 1px; color: #aaa; text-transform: uppercase;">Re-Engaging Guidance Stream</div>
             <div id="countdownValue">5</div>
         </div>
-
         <div id="screenResult" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
             <div class="story-header" style="color: var(--success-green); font-size: 22px;">MISSION ACCOMPLISHED!</div>
             <div class="result-data-box">
@@ -202,7 +198,11 @@
         
         questionLogs = []; 
         firstChoiceLogs = [];
-        storyPart = 0; showStoryPart(); showScreen('screenBriefing');
+        currentQuestionIndex = 0;
+        syncScore = 0;
+        distance = 0;
+        nextMilestone = 1000;
+        showStoryPart(); showScreen('screenBriefing');
     }
 
     function showStoryPart() {
@@ -223,7 +223,7 @@
     }
 
     function showQuestion() {
-        if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; runLoadingTimer(); return; }
+        if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; resumeGame(); return; }
         firstAttempt = true;
         document.getElementById('quizNextBtn').style.display = "none"; 
         
@@ -251,12 +251,10 @@
             stability = Math.round((syncScore / currentQuestionSet.length) * 100);
             stabText.innerText = stability;
             
-            // Disable remaining buttons to prevent duplicate inputs
             const buttons = document.getElementById('optionsContainer').getElementsByTagName('button');
             for(let btn of buttons) { btn.classList.add('disabled'); btn.onclick = null; }
             clickedButton.style.background = "var(--success-green)";
             
-            // 🌟 Reveal manual "Next Button" ONLY when selection matches the correct index key
             document.getElementById('quizNextBtn').style.display = "block";
         } else {
             if (firstAttempt) {
@@ -266,7 +264,6 @@
             }
             feedbackMsg.innerText = "✗ SYSTEM LOCK: MISMATCH DETECTED"; feedbackMsg.className = "wrong"; feedbackMsg.style.display = "block";
             clickedButton.style.background = "var(--emergency-red)";
-            // 🌟 Note: Does NOT skip or clear. The player stays stuck here until they guess the correct answer!
         }
     }
 
@@ -274,7 +271,11 @@
         feedbackMsg.style.display = "none";
         currentQuestionIndex++; batchCount++;
         
-        if (batchCount < 5 && currentQuestionIndex < currentQuestionSet.length) { 
+        // Check if batch is completed OR if we've officially run through all questions
+        if (currentQuestionIndex >= currentQuestionSet.length) {
+            arriving = true;
+            resumeGame();
+        } else if (batchCount < 5) { 
             showQuestion(); 
         } else { 
             resumeGame(); 
@@ -283,19 +284,15 @@
 
     function resumeGame() {
         inQuiz = false;
-        if (currentQuestionIndex >= currentQuestionSet.length) {
-            arriving = true;
+        if (arriving) {
             finalLoggedStability = stability;
             finalLoggedSyncScore = syncScore;
-            // Go straight to final scoreboard layout once total track lists clear out completely
             mainOverlay.style.display = 'none'; isPaused = false;
         } else {
-            // 🌟 Run the 5-Second countdown animation before letting them drive again
             runLoadingTimer();
         }
     }
 
-    // 🌟 5-Second Loading Intermission Countdown Core Function
     function runLoadingTimer() {
         showScreen('screenLoading');
         let remainingSeconds = 5;
@@ -393,7 +390,13 @@
             if (keys['ArrowLeft'] && ambulance.x > 15) ambulance.x -= ambulance.speed;
             if (keys['ArrowRight'] && ambulance.x < canvas.width - ambulance.w - 15) ambulance.x += ambulance.speed;
             distance += 4; roadOffset += 12;
-            if (distance >= nextMilestone && currentQuestionIndex < currentQuestionSet.length) triggerCheckpoint();
+            
+            // Trigger quiz checkpoints every 1000m loop block
+            if (distance >= nextMilestone && currentQuestionIndex < currentQuestionSet.length) {
+                nextMilestone += 1000;
+                triggerCheckpoint();
+            }
+            
             spawnTimer++;
             if (spawnTimer > 40) {
                 const colors = ['#f39c12', '#8e44ad', '#27ae60', '#d35400'];
