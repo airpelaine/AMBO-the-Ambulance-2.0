@@ -106,6 +106,8 @@
     <button class="reset-btn" onclick="location.reload()">RESET SIMULATION</button>
 </div>
 
+<div id="trackingBufferChannel" style="display: none;"></div>
+
 <script>
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?gid=0&single=true&output=csv";
 
@@ -310,8 +312,6 @@
     function processValidation() {
         const modKey = document.getElementById('trainingModule').value;
         const siteKey = document.getElementById('playerSite').value;
-        const completionCode = `${playerIDValue}-${finalLoggedStability}-${finalLoggedSyncScore}`;
-        
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
         for (let i = 0; i < currentQuestionSet.length; i++) {
@@ -321,13 +321,11 @@
 
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
         
-        // 🌟 FIXED FLUID REDIRECT PASSING LOG ARRAYS SAFELY THROUGH URL STRINGS
+        // 🌟 PACKAGES LOG ARRAYS INTO CLEAN STRINGS PASSING SAFELY VIA PARAMETERS
         const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
         const cleanLogs = encodeURIComponent(JSON.stringify(questionLogs));
         
-        const finalRedirectURL = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
-        
-        window.location.href = finalRedirectURL;
+        window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
     }
 
     function drawAmbulance() {
