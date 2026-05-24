@@ -109,8 +109,7 @@
 <div id="trackingBufferChannel" style="display: none;"></div>
 
 <script>
-    // 🌟 LINKED TO YOUR EXACT REQUESTED CSV SPECIFICATION (GID=0 Tab Frame)
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?output=csv";
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?gid=0&single=true&output=csv";
 
     const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
     const distText = document.getElementById('dist'), stabText = document.getElementById('stabilityDisplay');
@@ -193,7 +192,7 @@
         
         currentQuestionSet = allQuestions[modKey] || [];
         if (currentQuestionSet.length === 0) {
-            alert("No vectors loaded from column matching selected module criteria.");
+            alert("No configuration vectors found matching selected assignment module targets.");
             return;
         }
         
