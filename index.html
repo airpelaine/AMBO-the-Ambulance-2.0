@@ -121,6 +121,7 @@
     let roadOffset = 0, spawnTimer = 0, hospitalY = -600, nextMilestone = 1000, firstAttempt = true, batchCount = 0;
     let playerIDValue = "", currentQuestionSet = [], questionLogs = [], firstChoiceLogs = [], storyPart = 0;
     let finalLoggedStability = 0, finalLoggedSyncScore = 0, allQuestions = {}; 
+    let masterModuleQuestionsLength = 0; // Tracks the original size of the question pool
 
     async function initializeCloudAssets() {
         try {
@@ -139,6 +140,10 @@
     function parseCloudCSV(text) {
         const lines = text.split(/\r?\n/);
         const mappedData = {};
+        
+        // Use a temporary counter to track the native row index per module group
+        let moduleCounters = {};
+
         for (let i = 1; i < lines.length; i++) {
             let row = lines[i];
             if (!row.trim()) continue;
@@ -149,15 +154,29 @@
             let scrubbedCells = processLine.map(v => v.replace(/^"|"$/g, '').trim());
             let moduleKey = scrubbedCells[0].trim();
             
+            if (!moduleCounters[moduleKey]) moduleCounters[moduleKey] = 0;
+            
             let questionObj = {
+                dbIndex: moduleCounters[moduleKey], // 🌟 CRITICAL: Remembers its static index slot position
                 q: scrubbedCells[1],
                 a: [scrubbedCells[2], scrubbedCells[3], scrubbedCells[4], scrubbedCells[5]].filter(Boolean),
                 correct: parseInt(scrubbedCells[6])
             };
+            
             if(!mappedData[moduleKey]) mappedData[moduleKey] = [];
             mappedData[moduleKey].push(questionObj);
+            moduleCounters[moduleKey]++;
         }
         allQuestions = mappedData;
+    }
+
+    // Fisher-Yates array shuffling logic helper function
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
     const ambulance = { x: 162, y: 480, w: 36, h: 70, speed: 7 };
@@ -190,14 +209,21 @@
         hudPlayerID.innerText = "ID: " + val;
         hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
         
-        currentQuestionSet = allQuestions[modKey] || [];
-        if (currentQuestionSet.length === 0) {
-            alert("No vectors loaded from column matching selected module criteria.");
+        let originalPool = allQuestions[modKey] || [];
+        if (originalPool.length === 0) {
+            alert("No configuration vectors found matching selected assignment module targets.");
             return;
         }
         
-        questionLogs = []; 
-        firstChoiceLogs = [];
+        masterModuleQuestionsLength = originalPool.length;
+        
+        // 🌟 SHUFFLE THE PLAYER-FACING POOL: Randomizes presentation order without breaking indices
+        currentQuestionSet = shuffleArray([...originalPool]);
+        
+        // Set up fixed tracking arrays that match the original pool's size perfectly
+        questionLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED"); 
+        firstChoiceLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED");
+        
         currentQuestionIndex = 0;
         syncScore = 0;
         distance = 0;
@@ -228,21 +254,29 @@
         document.getElementById('quizNextBtn').style.display = "none"; 
         
         const q = currentQuestionSet[currentQuestionIndex];
-        document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Q${currentQuestionIndex + 1}: ${q.q}`;
+        // Display linear incremental numbers to the user (e.g., "Q1", "Q2") instead of row indices
+        document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Question ${currentQuestionIndex + 1} of ${currentQuestionSet.length}: ${q.q}`;
         const container = document.getElementById('optionsContainer'); container.innerHTML = '';
-        q.a.forEach((opt, i) => {
+        
+        // Shuffle option selections on the screen
+        let shuffledOptions = shuffleArray([...q.a]);
+        shuffledOptions.forEach((opt) => {
             const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
-            btn.onclick = () => handleAnswer(i, btn); container.appendChild(btn);
+            btn.onclick = () => handleAnswer(opt, btn); container.appendChild(btn);
         });
     }
 
-    function handleAnswer(idx, clickedButton) {
+    function handleAnswer(selectedText, clickedButton) {
         const qData = currentQuestionSet[currentQuestionIndex];
-        const isCorrect = (idx === qData.correct);
+        const correctText = qData.a[qData.correct];
+        const isCorrect = (selectedText === correctText);
+        
+        // 🌟 MAP TO FIXED MATRIX ROW: Resolves the static column index inside the array pipeline
+        let targetSlot = qData.dbIndex;
 
         if (firstAttempt) {
-            questionLogs[currentQuestionIndex] = isCorrect ? "CORRECT" : "WRONG";
-            firstChoiceLogs[currentQuestionIndex] = qData.a[idx] || "EMPTY_CHOICE";
+            questionLogs[targetSlot] = isCorrect ? "CORRECT" : "WRONG";
+            firstChoiceLogs[targetSlot] = selectedText || "EMPTY_CHOICE";
         }
 
         if (isCorrect) {
@@ -314,18 +348,13 @@
         const siteKey = document.getElementById('playerSite').value;
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
-        for (let i = 0; i < currentQuestionSet.length; i++) {
-            if (!questionLogs[i]) questionLogs[i] = "UNANSWERED";
-            if (!firstChoiceLogs[i]) firstChoiceLogs[i] = "UNANSWERED";
-        }
-
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
         
-        // 🌟 PACKAGES LOG ARRAYS INTO CLEAN STRINGS PASSING SAFELY VIA PARAMETERS
         const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
         const cleanLogs = encodeURIComponent(JSON.stringify(questionLogs));
         
-        window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${currentQuestionSet.length}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
+        // Telemetry flows cleanly back into chronological database column headers natively
+        window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${masterModuleQuestionsLength}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
     }
 
     function drawAmbulance() {
@@ -340,11 +369,32 @@
         ctx.fillStyle = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
         ctx.fillStyle = '#fff'; ctx.fillRect(car.x+4, car.y+car.h-6, 4, 3); ctx.fillRect(car.x+car.w-8, car.y+car.h-6, 4, 3);
     }
+    
+    // 🌟 FULLY LOADED HIGH-FIDELITY ARCHITECTURAL HOSPITAL MODEL SHIFT 
     function drawHospital() {
-        ctx.fillStyle = '#f0f0f0'; ctx.fillRect(10, hospitalY, 340, 500);
-        ctx.fillStyle = '#333'; ctx.fillRect(10, hospitalY, 340, 15);
-        ctx.fillStyle = '#004a99'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText("ST. LUKE'S MEDICAL CENTER", 180, hospitalY + 45);
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(10, hospitalY, 340, 500);
+        ctx.fillStyle = '#0f172a'; ctx.fillRect(10, hospitalY, 340, 20);
+        ctx.fillRect(10, hospitalY + 90, 340, 10);
+        ctx.fillStyle = '#0284c7'; ctx.fillRect(25, hospitalY + 30, 310, 45);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText("ST. LUKE'S MEDICAL CENTER", 180, hospitalY + 58);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(172, hospitalY + 115, 16, 45); 
+        ctx.fillRect(157, hospitalY + 130, 46, 16); 
+        ctx.fillStyle = '#38bdf8';
+        const startYPosition = hospitalY + 190;
+        for (let structuralRow = 0; structuralRow < 4; structuralRow++) {
+            for (let buildingColumn = 0; buildingColumn < 6; buildingColumn++) {
+                let winX = 35 + (buildingColumn * 50);
+                let winY = startYPosition + (structuralRow * 55);
+                ctx.fillRect(winX, winY, 32, 30);
+                ctx.fillStyle = '#e0f2fe';
+                ctx.fillRect(winX + 2, winY + 2, 28, 4);
+                ctx.fillStyle = '#38bdf8'; 
+            }
+        }
+        ctx.fillStyle = '#475569'; ctx.fillRect(90, hospitalY + 410, 180, 90);
+        ctx.fillStyle = '#0f172a'; ctx.fillRect(105, hospitalY + 430, 150, 70); 
     }
 
     function update() {
@@ -352,7 +402,7 @@
         if (arriving) {
             traffic = [];
             if (hospitalY < 20) { hospitalY += 3; roadOffset += 4; } 
-            else { if (ambulance.y > 450) { ambulance.y -= 1.5; } else { isPaused = true; document.getElementById('finalStability').innerText = finalLoggedStability + "%"; document.getElementById('finalSync').innerText = `${finalLoggedSyncScore}/${currentQuestionSet.length}`; document.getElementById('finalPlayerDisplay').innerText = "PLAYER ID: " + playerIDValue; showScreen('screenResult'); mainOverlay.style.display = 'flex'; } }
+            else { if (ambulance.y > 450) { ambulance.y -= 1.5; } else { isPaused = true; document.getElementById('finalStability').innerText = finalLoggedStability + "%"; document.getElementById('finalSync').innerText = `${finalLoggedSyncScore}/${masterModuleQuestionsLength}`; document.getElementById('finalPlayerDisplay').innerText = "PLAYER ID: " + playerIDValue; showScreen('screenResult'); mainOverlay.style.display = 'flex'; } }
         } else {
             if (keys['ArrowLeft'] && ambulance.x > 15) ambulance.x -= ambulance.speed;
             if (keys['ArrowRight'] && ambulance.x < canvas.width - ambulance.w - 15) ambulance.x += ambulance.speed;
