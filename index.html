@@ -75,7 +75,7 @@
         </div>
         <div id="screenBriefing" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div class="ambo-avatar"><div class="siren-light"></div></div>
-            <div class="story-header">🚨 MISSION BRIEFING 🚨</div>
+            <div id="briefingHeaderTitle" class="story-header">🚨 MISSION BRIEFING 🚨</div>
             <div id="storyContent" class="story-text"></div>
             <button id="storyBtn" class="game-btn btn-green" onclick="nextStory()">CONTINUE</button>
         </div>
@@ -117,11 +117,11 @@
     const progBar = document.getElementById('progressBar'), mainOverlay = document.getElementById('mainOverlay'), feedbackMsg = document.getElementById('feedbackMsg');
 
     let distance = 0, stability = 0, currentQuestionIndex = 0, syncScore = 0;
-    let isPaused = true, inQuiz = false, gameStarted = false, arriving = false;
+    let isPaused = true, inQuiz = false, gameStarted = false, arriving = false, midMilestonePause = false;
     let roadOffset = 0, spawnTimer = 0, hospitalY = -600, nextMilestone = 1000, firstAttempt = true, batchCount = 0;
     let playerIDValue = "", currentQuestionSet = [], questionLogs = [], firstChoiceLogs = [], storyPart = 0;
     let finalLoggedStability = 0, finalLoggedSyncScore = 0, allQuestions = {}; 
-    let masterModuleQuestionsLength = 0; // Tracks the original size of the question pool
+    let masterModuleQuestionsLength = 0;
 
     async function initializeCloudAssets() {
         try {
@@ -140,8 +140,6 @@
     function parseCloudCSV(text) {
         const lines = text.split(/\r?\n/);
         const mappedData = {};
-        
-        // Use a temporary counter to track the native row index per module group
         let moduleCounters = {};
 
         for (let i = 1; i < lines.length; i++) {
@@ -157,7 +155,7 @@
             if (!moduleCounters[moduleKey]) moduleCounters[moduleKey] = 0;
             
             let questionObj = {
-                dbIndex: moduleCounters[moduleKey], // 🌟 CRITICAL: Remembers its static index slot position
+                dbIndex: moduleCounters[moduleKey],
                 q: scrubbedCells[1],
                 a: [scrubbedCells[2], scrubbedCells[3], scrubbedCells[4], scrubbedCells[5]].filter(Boolean),
                 correct: parseInt(scrubbedCells[6])
@@ -170,13 +168,24 @@
         allQuestions = mappedData;
     }
 
-    // Fisher-Yates array shuffling logic helper function
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
         return array;
+    }
+
+    // 🌟 ADDED: Layman-Friendly Milestone Announcements
+    function getMilestoneStory(dist) {
+        const stories = {
+            1000: `"AMBO System here. You've cleared the worst of the starting highway traffic! <b>Heads up:</b> We are getting close to the hospital network zone. Get ready to answer your first training question!"`,
+            2000: `"Great driving, Pilot! You just hit the 2,000-meter mark. The hospital needs a quick update on your clinical settings. Take a deep breath and get ready for the next round of questions."`,
+            3000: `"We are moving fast now! The city streets are getting narrower and more crowded up ahead. Keep your eyes on the road and stay sharp—the next training checkpoint is opening right now!"`,
+            4000: `"4,000 meters down! You can actually see the hospital's radio antennas from here. The medical staff needs to double-check your current progress data before you get any closer. Let's start the next quiz!"`,
+            5000: `"Final stretch! The ambulance bay is just around the corner. Let's finish this last set of questions perfectly so we can secure a safe landing and clear the patient's intake!"`
+        };
+        return stories[dist] || `"Target distance reached! The AMBO backup system needs a quick data sync to keep everything running smoothly. Focus up, Pilot!"`;
     }
 
     const ambulance = { x: 162, y: 480, w: 36, h: 70, speed: 7 };
@@ -194,7 +203,15 @@
         e.preventDefault();
     }, { passive: false });
 
-    function getBriefingText() { return [`"System online. <b>Hello, Pilot ${playerIDValue}!</b>"`,`"Avoid collisions! Every impact results in a <b>-100m deduction</b>."`,`"Only the <b>first choice</b> counts toward your Sync score."`,`"Keep the data stream stable. Deploying now..."`]; }
+    // 🌟 ADDED: Updated, Layman-Friendly Briefing Text
+    function getBriefingText() { 
+        return [
+            `"System online. <b>Welcome, Pilot ${playerIDValue}!</b>"`,
+            `"Steer carefully! Every time you hit a car, you lose <b>100 meters</b> of progress."`,
+            `"Take your time on the questions—only your <b>very first guess</b> counts toward your final score."`,
+            `"Keep the patient stable and get us to the hospital. Starting the engine now..."`
+        ]; 
+    }
 
     function showScreen(id) {
         ['screenStart', 'screenDetails', 'screenBriefing', 'screenQuiz', 'screenLoading', 'screenResult'].forEach(s => document.getElementById(s).style.display = 'none');
@@ -216,11 +233,8 @@
         }
         
         masterModuleQuestionsLength = originalPool.length;
-        
-        // 🌟 SHUFFLE THE PLAYER-FACING POOL: Randomizes presentation order without breaking indices
         currentQuestionSet = shuffleArray([...originalPool]);
         
-        // Set up fixed tracking arrays that match the original pool's size perfectly
         questionLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED"); 
         firstChoiceLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED");
         
@@ -228,24 +242,38 @@
         syncScore = 0;
         distance = 0;
         nextMilestone = 1000;
+        midMilestonePause = false;
         showStoryPart(); showScreen('screenBriefing');
     }
 
     function showStoryPart() {
         const texts = getBriefingText();
+        document.getElementById('briefingHeaderTitle').innerText = "🚨 MISSION BRIEFING 🚨";
         document.getElementById('storyContent').innerHTML = texts[storyPart];
         document.getElementById('storyBtn').innerText = storyPart === texts.length - 1 ? "🚀 DEPLOY AMBO" : "NEXT";
     }
 
     function nextStory() {
-        const texts = getBriefingText();
-        if (storyPart < texts.length - 1) { storyPart++; showStoryPart(); } 
-        else { mainOverlay.style.display = 'none'; isPaused = false; gameStarted = true; }
+        if (midMilestonePause) {
+            midMilestonePause = false;
+            showScreen('screenQuiz');
+            showQuestion();
+        } else {
+            const texts = getBriefingText();
+            if (storyPart < texts.length - 1) { storyPart++; showStoryPart(); } 
+            else { mainOverlay.style.display = 'none'; isPaused = false; gameStarted = true; }
+        }
     }
 
     function triggerCheckpoint() {
         inQuiz = true; isPaused = true; batchCount = 0;
-        mainOverlay.style.display = 'flex'; showScreen('screenQuiz'); showQuestion();
+        mainOverlay.style.display = 'flex'; 
+        
+        midMilestonePause = true;
+        showScreen('screenBriefing');
+        document.getElementById('briefingHeaderTitle').innerText = "📍 MILESTONE REACHED";
+        document.getElementById('storyContent').innerHTML = getMilestoneStory(nextMilestone - 1000);
+        document.getElementById('storyBtn').innerText = "ENGAGE SYNC QUIZ";
     }
 
     function showQuestion() {
@@ -254,11 +282,9 @@
         document.getElementById('quizNextBtn').style.display = "none"; 
         
         const q = currentQuestionSet[currentQuestionIndex];
-        // Display linear incremental numbers to the user (e.g., "Q1", "Q2") instead of row indices
         document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Question ${currentQuestionIndex + 1} of ${currentQuestionSet.length}: ${q.q}`;
         const container = document.getElementById('optionsContainer'); container.innerHTML = '';
         
-        // Shuffle option selections on the screen
         let shuffledOptions = shuffleArray([...q.a]);
         shuffledOptions.forEach((opt) => {
             const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
@@ -270,8 +296,6 @@
         const qData = currentQuestionSet[currentQuestionIndex];
         const correctText = qData.a[qData.correct];
         const isCorrect = (selectedText === correctText);
-        
-        // 🌟 MAP TO FIXED MATRIX ROW: Resolves the static column index inside the array pipeline
         let targetSlot = qData.dbIndex;
 
         if (firstAttempt) {
@@ -353,7 +377,6 @@
         const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
         const cleanLogs = encodeURIComponent(JSON.stringify(questionLogs));
         
-        // Telemetry flows cleanly back into chronological database column headers natively
         window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${masterModuleQuestionsLength}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
     }
 
@@ -370,7 +393,7 @@
         ctx.fillStyle = '#fff'; ctx.fillRect(car.x+4, car.y+car.h-6, 4, 3); ctx.fillRect(car.x+car.w-8, car.y+car.h-6, 4, 3);
     }
     
-    // 🌟 FULLY LOADED HIGH-FIDELITY ARCHITECTURAL HOSPITAL MODEL SHIFT 
+    // 🌟 ADDED: Upgraded Hospital Building Graphics Model
     function drawHospital() {
         ctx.fillStyle = '#1e293b'; ctx.fillRect(10, hospitalY, 340, 500);
         ctx.fillStyle = '#0f172a'; ctx.fillRect(10, hospitalY, 340, 20);
