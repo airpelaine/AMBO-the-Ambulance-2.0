@@ -37,12 +37,20 @@
         .spinner { border: 4px solid rgba(255,255,255,0.1); width: 42px; height: 42px; border-radius: 50%; border-left-color: var(--primary-blue); animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #countdownValue { font-size: 36px; font-weight: bold; color: var(--primary-blue); margin-top: 5px; }
+        
+        /* 🌟 AUDIO CONTROL UI INTERFACE */
+        .audio-toggle-btn { position: absolute; top: -50px; right: -50px; background: rgba(30, 30, 30, 0.9); border: 1px solid #444; border-radius: 8px; color: var(--primary-blue); font-size: 12px; font-weight: bold; padding: 7px 10px; cursor: pointer; z-index: 200; display: flex; align-items: center; justify-content: center; width: 40px; box-sizing: border-box; }
+        .audio-toggle-btn:hover { background: #252525; border-color: var(--primary-blue); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="hud-header-tag"><span id="hudModuleTitle">CLINICAL SERVICES</span><span id="hudPlayerID">ID: ---</span></div>
+    <div class="hud-header-tag">
+        <span id="hudModuleTitle">CLINICAL SERVICES</span>
+        <span id="hudPlayerID" style="margin-right: 45px;">ID: ---</span>
+        <button class="audio-toggle-btn" id="audioToggleBtn" onclick="toggleAudioStream()">🔊</button>
+    </div>
     <div class="stats-bar">
         <div class="stat-item stat-red">💓 STABILITY: <span id="stabilityDisplay">0</span>%</div>
         <div class="stat-item stat-blue">🏁 <span id="dist">0</span>m</div>
@@ -53,7 +61,7 @@
             <div class="ambo-avatar"><div class="siren-light"></div></div>
             <h1 style="margin: 0; color: #fff; font-size: 28px;">🚑 AMBO</h1>
             <p style="color: var(--warning-gold); font-size: 11px; margin-bottom: 30px;">Automated Module-Based Outcome</p>
-            <button class="game-btn btn-green" id="startMissionBtn" onclick="showScreen('screenDetails')" disabled>LOADING CLOUD CACHE...</button>
+            <button class="game-btn btn-green" id="startMissionBtn" onclick="engageAudioAndProceed()" disabled>LOADING CLOUD CACHE...</button>
         </div>
         <div id="screenDetails" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div class="story-header">DEPLOYMENT</div>
@@ -82,7 +90,7 @@
         <div id="screenQuiz" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div id="feedbackMsg"></div>
             <div id="qText" style="font-size: 14px; margin-bottom: 10px; font-weight: bold; line-height: 1.4;"></div>
-            <div id="optionsContainer"></div>
+           <div id="optionsContainer"></div>
             <button id="quizNextBtn" class="game-btn btn-green" style="display: none; margin-top: 10px;" onclick="advanceQuizSequence()">CONTINUE TO NEXT QUESTION</button>
         </div>
         <div id="screenLoading" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
@@ -122,6 +130,35 @@
     let playerIDValue = "", currentQuestionSet = [], questionLogs = [], firstChoiceLogs = [], storyPart = 0;
     let finalLoggedStability = 0, finalLoggedSyncScore = 0, allQuestions = {}; 
     let masterModuleQuestionsLength = 0;
+
+    // 🌟 AUDIO SYSTEM ASSETS AND MATRIX PARAMETERS
+    let audioStream = null;
+    let audioIsMuted = false;
+
+    function engageAudioAndProceed() {
+        if (!audioStream) {
+            audioStream = new Audio("Measured_Response.mp3");
+            audioStream.loop = true;
+            audioStream.volume = 0.40; // Soft baseline execution balance
+            audioStream.play().catch(err => {
+                console.warn("Audio node context initialization deferred waiting on direct window framework verification:", err);
+            });
+        }
+        showScreen('screenDetails');
+    }
+
+    function toggleAudioStream() {
+        if (!audioStream) return;
+        if (audioIsMuted) {
+            audioStream.muted = false;
+            audioIsMuted = false;
+            document.getElementById('audioToggleBtn').innerText = "🔊";
+        } else {
+            audioStream.muted = true;
+            audioIsMuted = true;
+            document.getElementById('audioToggleBtn').innerText = "🔇";
+        }
+    }
 
     async function initializeCloudAssets() {
         try {
@@ -225,21 +262,21 @@
         playerIDValue = val;
         hudPlayerID.innerText = "ID: " + val;
         hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
-        
+         
         let originalPool = allQuestions[modKey] || [];
         if (originalPool.length === 0) {
             alert("No configuration vectors found matching selected assignment module targets.");
             return;
         }
-        
+         
         masterModuleQuestionsLength = originalPool.length;
         currentQuestionSet = shuffleArray([...originalPool]);
-        
+         
         questionLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED"); 
         firstChoiceLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED");
-        
+         
         currentQuestionIndex = 0;
-        syncScore = 0;
+       syncScore = 0;
         distance = 0;
         nextMilestone = 1000;
         midMilestonePause = false;
@@ -268,7 +305,7 @@
     function triggerCheckpoint() {
         inQuiz = true; isPaused = true; batchCount = 0;
         mainOverlay.style.display = 'flex'; 
-        
+         
         midMilestonePause = true;
         showScreen('screenBriefing');
         document.getElementById('briefingHeaderTitle').innerText = "📍 MILESTONE REACHED";
@@ -280,11 +317,11 @@
         if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; resumeGame(); return; }
         firstAttempt = true;
         document.getElementById('quizNextBtn').style.display = "none"; 
-        
+         
         const q = currentQuestionSet[currentQuestionIndex];
         document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Question ${currentQuestionIndex + 1} of ${currentQuestionSet.length}: ${q.q}`;
         const container = document.getElementById('optionsContainer'); container.innerHTML = '';
-        
+         
         let shuffledOptions = shuffleArray([...q.a]);
         shuffledOptions.forEach((opt) => {
             const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
@@ -308,11 +345,11 @@
             feedbackMsg.innerText = "✓ DATA VALIDATED"; feedbackMsg.className = "correct"; feedbackMsg.style.display = "block";
             stability = Math.round((syncScore / currentQuestionSet.length) * 100);
             stabText.innerText = stability;
-            
+             
             const buttons = document.getElementById('optionsContainer').getElementsByTagName('button');
-            for(let btn of buttons) { btn.classList.add('disabled'); btn.onclick = null; }
+           for(let btn of buttons) { btn.classList.add('disabled'); btn.onclick = null; }
             clickedButton.style.background = "var(--success-green)";
-            
+             
             document.getElementById('quizNextBtn').style.display = "block";
         } else {
             if (firstAttempt) {
@@ -328,7 +365,7 @@
     function advanceQuizSequence() {
         feedbackMsg.style.display = "none";
         currentQuestionIndex++; batchCount++;
-        
+         
         if (currentQuestionIndex >= currentQuestionSet.length) {
             arriving = true;
             resumeGame();
@@ -352,13 +389,13 @@
 
     function runLoadingTimer() {
         showScreen('screenLoading');
-        let remainingSeconds = 5;
+       let remainingSeconds = 5;
         document.getElementById('countdownValue').innerText = remainingSeconds;
-        
+         
         let timerInterval = setInterval(() => {
             remainingSeconds--;
             document.getElementById('countdownValue').innerText = remainingSeconds;
-            
+             
             if(remainingSeconds <= 0) {
                 clearInterval(timerInterval);
                 mainOverlay.style.display = 'none'; 
@@ -373,10 +410,10 @@
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
-        
+         
         const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
         const cleanLogs = encodeURIComponent(JSON.stringify(questionLogs));
-        
+         
         window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${masterModuleQuestionsLength}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
     }
 
@@ -389,10 +426,10 @@
     }
     function drawCar(car) {
         ctx.fillStyle = car.color; ctx.fillRect(car.x, car.y, car.w, car.h);
-        ctx.fillStyle = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
+      = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
         ctx.fillStyle = '#fff'; ctx.fillRect(car.x+4, car.y+car.h-6, 4, 3); ctx.fillRect(car.x+car.w-8, car.y+car.h-6, 4, 3);
     }
-    
+     
     // 🌟 ADDED: Upgraded Hospital Building Graphics Model
     function drawHospital() {
         ctx.fillStyle = '#1e293b'; ctx.fillRect(10, hospitalY, 340, 500);
@@ -430,19 +467,19 @@
             if (keys['ArrowLeft'] && ambulance.x > 15) ambulance.x -= ambulance.speed;
             if (keys['ArrowRight'] && ambulance.x < canvas.width - ambulance.w - 15) ambulance.x += ambulance.speed;
             distance += 4; roadOffset += 12;
-            
+             
             if (distance >= nextMilestone && currentQuestionIndex < currentQuestionSet.length) {
                 nextMilestone += 1000;
                 triggerCheckpoint();
             }
-            
+             
             spawnTimer++;
             if (spawnTimer > 40) {
                 const colors = ['#f39c12', '#8e44ad', '#27ae60', '#d35400'];
                 traffic.push({ x: Math.random()*(canvas.width-50) + 10, y: -100, w: 34, h: 65, speed: 5 + Math.random()*2, color: colors[Math.floor(Math.random()*4)] });
                 spawnTimer = 0;
             }
-            for (let i = traffic.length-1; i >= 0; i--) {
+           for (let i = traffic.length-1; i >= 0; i--) {
                 traffic[i].y += traffic[i].speed;
                 if (ambulance.x < traffic[i].x + traffic[i].w && ambulance.x + ambulance.w > traffic[i].x && ambulance.y < traffic[i].y + traffic[i].h && ambulance.y + ambulance.h > traffic[i].y) { distance = Math.max(0, distance - 100); traffic.splice(i, 1); } else if (traffic[i].y > canvas.height) traffic.splice(i, 1);
             }
@@ -457,7 +494,7 @@
         ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
         if (arriving) drawHospital(); traffic.forEach(drawCar); drawAmbulance(); requestAnimationFrame(draw);
     }
-    
+     
     initializeCloudAssets();
     setInterval(update, 1000/60); draw();
 </script>
