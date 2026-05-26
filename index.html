@@ -32,7 +32,6 @@
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary-blue), #00ff88); transition: width 0.4s ease; }
         .game-btn { padding: 16px 24px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; letter-spacing: 1px; }
         .btn-green { background: var(--success-green); width: 100%; margin-top: 10px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
-        .reset-btn { background: none; border: none; color: #666; margin-top: 10px; font-size: 11px; cursor: pointer; text-decoration: underline; font-weight: bold; }
         .result-data-box { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; padding: 15px; margin: 15px 0; width: 85%; }
         .spinner { border: 4px solid rgba(255,255,255,0.1); width: 42px; height: 42px; border-radius: 50%; border-left-color: var(--primary-blue); animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -171,7 +170,6 @@
         }
     }
 
-    // 🌟 REWRITTEN HIGH-STABILITY RFC-COMPLIANT CSV PARSER ENGINE
     function parseCloudCSV(text) {
         const mappedData = {};
         let moduleCounters = {};
@@ -181,7 +179,6 @@
         let inQuotes = false;
         let currentCell = '';
 
-        // Linear character token scan to account safely for quotes, embedded commas, and windows breaks
         for (let i = 0; i < text.length; i++) {
             let c = text[i];
             let nextC = text[i + 1];
@@ -190,7 +187,7 @@
                 if (c === '"') {
                     if (nextC === '"') {
                         currentCell += '"';
-                        i++; // Skip double escape quotes
+                        i++; 
                     } else {
                         inQuotes = false;
                     }
@@ -211,7 +208,7 @@
                     }
                     row = [];
                     if (c === '\r' && nextC === '\n') {
-                        i++; // Process CRLF structural skip
+                        i++; 
                     }
                 } else {
                     currentCell += c;
@@ -219,13 +216,11 @@
             }
         }
         
-        // Push residual buffer elements
         if (currentCell || row.length > 0) {
             row.push(currentCell.trim());
             if (row.some(cell => cell !== "")) lines.push(row);
         }
 
-        // Map safe structured values back to game data tree definitions (Skip Header block row 0)
         for (let i = 1; i < lines.length; i++) {
             let cells = lines[i];
             if (cells.length < 7 || !cells[0]) continue;
@@ -449,6 +444,7 @@
         const siteKey = document.getElementById('playerSite').value;
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
+        // 🌟 CRITICAL REMINDER: Swap out this mock path with your live Deployment URL from Web App Publishing
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
         
         const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
