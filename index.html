@@ -38,7 +38,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #countdownValue { font-size: 36px; font-weight: bold; color: var(--primary-blue); margin-top: 5px; }
         
-        /* 🌟 AUDIO CONTROL UI INTERFACE */
         .audio-toggle-btn { position: absolute; top: -50px; right: -50px; background: rgba(30, 30, 30, 0.9); border: 1px solid #444; border-radius: 8px; color: var(--primary-blue); font-size: 12px; font-weight: bold; padding: 7px 10px; cursor: pointer; z-index: 200; display: flex; align-items: center; justify-content: center; width: 40px; box-sizing: border-box; }
         .audio-toggle-btn:hover { background: #252525; border-color: var(--primary-blue); }
     </style>
@@ -90,7 +89,7 @@
         <div id="screenQuiz" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div id="feedbackMsg"></div>
             <div id="qText" style="font-size: 14px; margin-bottom: 10px; font-weight: bold; line-height: 1.4;"></div>
-           <div id="optionsContainer"></div>
+            <div id="optionsContainer"></div>
             <button id="quizNextBtn" class="game-btn btn-green" style="display: none; margin-top: 10px;" onclick="advanceQuizSequence()">CONTINUE TO NEXT QUESTION</button>
         </div>
         <div id="screenLoading" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
@@ -131,7 +130,6 @@
     let finalLoggedStability = 0, finalLoggedSyncScore = 0, allQuestions = {}; 
     let masterModuleQuestionsLength = 0;
 
-    // 🌟 AUDIO SYSTEM ASSETS AND MATRIX PARAMETERS
     let audioStream = null;
     let audioIsMuted = false;
 
@@ -139,9 +137,9 @@
         if (!audioStream) {
             audioStream = new Audio("Measured_Response.mp3");
             audioStream.loop = true;
-            audioStream.volume = 0.40; // Soft baseline execution balance
+            audioStream.volume = 0.40;
             audioStream.play().catch(err => {
-                console.warn("Audio node context initialization deferred waiting on direct window framework verification:", err);
+                console.warn("Audio interaction delay protection triggered:", err);
             });
         }
         showScreen('screenDetails');
@@ -174,31 +172,76 @@
         }
     }
 
+    // 🌟 REWRITTEN HIGH-STABILITY RFC-COMPLIANT CSV PARSER ENGINE
     function parseCloudCSV(text) {
-        const lines = text.split(/\r?\n/);
         const mappedData = {};
         let moduleCounters = {};
+        
+        let lines = [];
+        let row = [];
+        let inQuotes = false;
+        let currentCell = '';
 
+        // Linear character token scan to account safely for quotes, embedded commas, and windows breaks
+        for (let i = 0; i < text.length; i++) {
+            let c = text[i];
+            let nextC = text[i + 1];
+
+            if (inQuotes) {
+                if (c === '"') {
+                    if (nextC === '"') {
+                        currentCell += '"';
+                        i++; // Skip double escape quotes
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    currentCell += c;
+                }
+            } else {
+                if (c === '"') {
+                    inQuotes = true;
+                } else if (c === ',') {
+                    row.push(currentCell.trim());
+                    currentCell = '';
+                } else if (c === '\r' || c === '\n') {
+                    row.push(currentCell.trim());
+                    currentCell = '';
+                    if (row.length > 1 && row.some(cell => cell !== "")) {
+                        lines.push(row);
+                    }
+                    row = [];
+                    if (c === '\r' && nextC === '\n') {
+                        i++; // Process CRLF structural skip
+                    }
+                } else {
+                    currentCell += c;
+                }
+            }
+        }
+        
+        // Push residual buffer elements
+        if (currentCell || row.length > 0) {
+            row.push(currentCell.trim());
+            if (row.some(cell => cell !== "")) lines.push(row);
+        }
+
+        // Map safe structured values back to game data tree definitions (Skip Header block row 0)
         for (let i = 1; i < lines.length; i++) {
-            let row = lines[i];
-            if (!row.trim()) continue;
-            
-            let processLine = row.match(/(".*?"|[^",\r\n]+)(?=\s*,|\s*$|\r|$)/g) || [];
-            if(processLine.length < 7) continue;
-            
-            let scrubbedCells = processLine.map(v => v.replace(/^"|"$/g, '').trim());
-            let moduleKey = scrubbedCells[0].trim();
-            
+            let cells = lines[i];
+            if (cells.length < 7 || !cells[0]) continue;
+
+            let moduleKey = cells[0].trim();
             if (!moduleCounters[moduleKey]) moduleCounters[moduleKey] = 0;
-            
+
             let questionObj = {
                 dbIndex: moduleCounters[moduleKey],
-                q: scrubbedCells[1],
-                a: [scrubbedCells[2], scrubbedCells[3], scrubbedCells[4], scrubbedCells[5]].filter(Boolean),
-                correct: parseInt(scrubbedCells[6])
+                q: cells[1],
+                a: [cells[2], cells[3], cells[4], cells[5]].filter(Boolean),
+                correct: parseInt(cells[6])
             };
-            
-            if(!mappedData[moduleKey]) mappedData[moduleKey] = [];
+
+            if (!mappedData[moduleKey]) mappedData[moduleKey] = [];
             mappedData[moduleKey].push(questionObj);
             moduleCounters[moduleKey]++;
         }
@@ -213,7 +256,6 @@
         return array;
     }
 
-    // 🌟 ADDED: Layman-Friendly Milestone Announcements
     function getMilestoneStory(dist) {
         const stories = {
             1000: `"AMBO System here. You've cleared the worst of the starting highway traffic! <b>Heads up:</b> We are getting close to the hospital network zone. Get ready to answer your first training question!"`,
@@ -240,7 +282,6 @@
         e.preventDefault();
     }, { passive: false });
 
-    // 🌟 ADDED: Updated, Layman-Friendly Briefing Text
     function getBriefingText() { 
         return [
             `"System online. <b>Welcome, Pilot ${playerIDValue}!</b>"`,
@@ -262,21 +303,21 @@
         playerIDValue = val;
         hudPlayerID.innerText = "ID: " + val;
         hudModuleTitle.innerText = document.getElementById('trainingModule').options[document.getElementById('trainingModule').selectedIndex].text.toUpperCase();
-         
+        
         let originalPool = allQuestions[modKey] || [];
         if (originalPool.length === 0) {
             alert("No configuration vectors found matching selected assignment module targets.");
             return;
         }
-         
+        
         masterModuleQuestionsLength = originalPool.length;
         currentQuestionSet = shuffleArray([...originalPool]);
-         
+        
         questionLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED"); 
         firstChoiceLogs = new Array(masterModuleQuestionsLength).fill("UNANSWERED");
-         
+        
         currentQuestionIndex = 0;
-       syncScore = 0;
+        syncScore = 0;
         distance = 0;
         nextMilestone = 1000;
         midMilestonePause = false;
@@ -305,7 +346,7 @@
     function triggerCheckpoint() {
         inQuiz = true; isPaused = true; batchCount = 0;
         mainOverlay.style.display = 'flex'; 
-         
+        
         midMilestonePause = true;
         showScreen('screenBriefing');
         document.getElementById('briefingHeaderTitle').innerText = "📍 MILESTONE REACHED";
@@ -317,11 +358,11 @@
         if (currentQuestionIndex >= currentQuestionSet.length) { arriving = true; resumeGame(); return; }
         firstAttempt = true;
         document.getElementById('quizNextBtn').style.display = "none"; 
-         
+        
         const q = currentQuestionSet[currentQuestionIndex];
         document.getElementById('qText').innerHTML = `<span style="color:var(--primary-blue)">SYSTEM SYNC...</span><br>Question ${currentQuestionIndex + 1} of ${currentQuestionSet.length}: ${q.q}`;
         const container = document.getElementById('optionsContainer'); container.innerHTML = '';
-         
+        
         let shuffledOptions = shuffleArray([...q.a]);
         shuffledOptions.forEach((opt) => {
             const btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
@@ -345,11 +386,11 @@
             feedbackMsg.innerText = "✓ DATA VALIDATED"; feedbackMsg.className = "correct"; feedbackMsg.style.display = "block";
             stability = Math.round((syncScore / currentQuestionSet.length) * 100);
             stabText.innerText = stability;
-             
+            
             const buttons = document.getElementById('optionsContainer').getElementsByTagName('button');
-           for(let btn of buttons) { btn.classList.add('disabled'); btn.onclick = null; }
+            for(let btn of buttons) { btn.classList.add('disabled'); btn.onclick = null; }
             clickedButton.style.background = "var(--success-green)";
-             
+            
             document.getElementById('quizNextBtn').style.display = "block";
         } else {
             if (firstAttempt) {
@@ -365,7 +406,7 @@
     function advanceQuizSequence() {
         feedbackMsg.style.display = "none";
         currentQuestionIndex++; batchCount++;
-         
+        
         if (currentQuestionIndex >= currentQuestionSet.length) {
             arriving = true;
             resumeGame();
@@ -389,13 +430,13 @@
 
     function runLoadingTimer() {
         showScreen('screenLoading');
-       let remainingSeconds = 5;
+        let remainingSeconds = 5;
         document.getElementById('countdownValue').innerText = remainingSeconds;
-         
+        
         let timerInterval = setInterval(() => {
             remainingSeconds--;
             document.getElementById('countdownValue').innerText = remainingSeconds;
-             
+            
             if(remainingSeconds <= 0) {
                 clearInterval(timerInterval);
                 mainOverlay.style.display = 'none'; 
@@ -410,10 +451,10 @@
         const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
 
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
-         
+        
         const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
         const cleanLogs = encodeURIComponent(JSON.stringify(questionLogs));
-         
+        
         window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${masterModuleQuestionsLength}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
     }
 
@@ -426,11 +467,10 @@
     }
     function drawCar(car) {
         ctx.fillStyle = car.color; ctx.fillRect(car.x, car.y, car.w, car.h);
-      = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
+        ctx.fillStyle = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
         ctx.fillStyle = '#fff'; ctx.fillRect(car.x+4, car.y+car.h-6, 4, 3); ctx.fillRect(car.x+car.w-8, car.y+car.h-6, 4, 3);
     }
-     
-    // 🌟 ADDED: Upgraded Hospital Building Graphics Model
+    
     function drawHospital() {
         ctx.fillStyle = '#1e293b'; ctx.fillRect(10, hospitalY, 340, 500);
         ctx.fillStyle = '#0f172a'; ctx.fillRect(10, hospitalY, 340, 20);
@@ -467,19 +507,19 @@
             if (keys['ArrowLeft'] && ambulance.x > 15) ambulance.x -= ambulance.speed;
             if (keys['ArrowRight'] && ambulance.x < canvas.width - ambulance.w - 15) ambulance.x += ambulance.speed;
             distance += 4; roadOffset += 12;
-             
+            
             if (distance >= nextMilestone && currentQuestionIndex < currentQuestionSet.length) {
                 nextMilestone += 1000;
                 triggerCheckpoint();
             }
-             
+            
             spawnTimer++;
             if (spawnTimer > 40) {
                 const colors = ['#f39c12', '#8e44ad', '#27ae60', '#d35400'];
                 traffic.push({ x: Math.random()*(canvas.width-50) + 10, y: -100, w: 34, h: 65, speed: 5 + Math.random()*2, color: colors[Math.floor(Math.random()*4)] });
                 spawnTimer = 0;
             }
-           for (let i = traffic.length-1; i >= 0; i--) {
+            for (let i = traffic.length-1; i >= 0; i--) {
                 traffic[i].y += traffic[i].speed;
                 if (ambulance.x < traffic[i].x + traffic[i].w && ambulance.x + ambulance.w > traffic[i].x && ambulance.y < traffic[i].y + traffic[i].h && ambulance.y + ambulance.h > traffic[i].y) { distance = Math.max(0, distance - 100); traffic.splice(i, 1); } else if (traffic[i].y > canvas.height) traffic.splice(i, 1);
             }
