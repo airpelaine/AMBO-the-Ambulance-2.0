@@ -70,6 +70,7 @@
                     <option value="acute_surgical">Acute/Surgical Care</option>
                     <option value="emergency">Emergency Care</option>
                     <option value="ambulatory">Ambulatory Care</option>
+                    <option value="medical_technologist">Medical Technologist</option>
                     <option value="basic">Basic Navigation</option>
                     <option value="shiftmanager">Shift Manager Roles</option>
                     <option value="discharge">Discharge Officer</option>
@@ -529,7 +530,7 @@
         ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
         if (arriving) drawHospital(); traffic.forEach(drawCar); drawAmbulance(); requestAnimationFrame(draw);
     }
-     
+       
     initializeCloudAssets();
     setInterval(update, 1000/60); draw();
 </script>
