@@ -440,7 +440,6 @@
         }, 1000);
     }
 
-    // UPDATED FUNCTION: Replaces GET request with a hidden POST Form.
     function processValidation() {
         const modKey = document.getElementById('trainingModule').value;
         const siteKey = document.getElementById('playerSite').value;
@@ -448,37 +447,34 @@
         genBtn.innerText = "SYNCING DATA..."; 
         genBtn.disabled = true;
 
-        // 🌟 CRITICAL REMINDER: Swap out this mock path with your live Deployment URL from Web App Publishing
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
         
-        const cleanChoices = JSON.stringify(firstChoiceLogs);
-        const cleanLogs = JSON.stringify(questionLogs);
-        
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = scriptURL;
-        
-        const params = {
-            id: playerIDValue,
-            stab: finalLoggedStability,
-            sync: finalLoggedSyncScore,
-            total: masterModuleQuestionsLength,
-            mod: modKey,
-            site: siteKey,
-            choices: cleanChoices,
-            logs: cleanLogs
-        };
-        
-        for (const key in params) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = params[key];
-            form.appendChild(input);
-        }
-        
-        document.body.appendChild(form);
-        form.submit();
+        // Pack exact mapped variables into a payload instead of the URL
+        const formData = new URLSearchParams();
+        formData.append('id', playerIDValue);
+        formData.append('stab', finalLoggedStability);
+        formData.append('sync', finalLoggedSyncScore);
+        formData.append('total', masterModuleQuestionsLength);
+        formData.append('mod', modKey);
+        formData.append('site', siteKey);
+        formData.append('choices', JSON.stringify(firstChoiceLogs));
+        formData.append('logs', JSON.stringify(questionLogs));
+
+        // Send data securely in the background to avoid URL limits, then redirect instantly
+        fetch(scriptURL, { method: 'POST', body: formData, mode: 'no-cors' })
+            .then(() => {
+                const uniqueCode = playerIDValue + "-" + finalLoggedStability + "-" + finalLoggedSyncScore;
+                const destinationURL = "https://docs.google.com/forms/d/e/1FAIpQLSfsapGwGN0CfhuiUieVz0xU8zRaMs9-qGva90XiNclQm-O2gA/viewform?entry.1802927237=" + playerIDValue + "&entry.556276856=" + encodeURIComponent(uniqueCode);
+                
+                // Directly route player to PhilHealth Form
+                window.top.location.href = destinationURL;
+            })
+            .catch(error => {
+                console.error('Error syncing:', error);
+                alert("Sync error. Please check your connection.");
+                genBtn.innerText = "VALIDATE & SYNC"; 
+                genBtn.disabled = false;
+            });
     }
 
     function drawAmbulance() {
