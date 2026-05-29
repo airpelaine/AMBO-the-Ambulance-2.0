@@ -440,18 +440,45 @@
         }, 1000);
     }
 
+    // UPDATED FUNCTION: Replaces GET request with a hidden POST Form.
     function processValidation() {
         const modKey = document.getElementById('trainingModule').value;
         const siteKey = document.getElementById('playerSite').value;
-        const genBtn = document.getElementById('genBtn'); genBtn.innerText = "SYNCING DATA..."; genBtn.disabled = true;
+        const genBtn = document.getElementById('genBtn'); 
+        genBtn.innerText = "SYNCING DATA..."; 
+        genBtn.disabled = true;
 
         // 🌟 CRITICAL REMINDER: Swap out this mock path with your live Deployment URL from Web App Publishing
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
         
-        const cleanChoices = encodeURIComponent(JSON.stringify(firstChoiceLogs));
-        const cleanLogs = encodeURIComponent(JSON.stringify(questionLogs));
+        const cleanChoices = JSON.stringify(firstChoiceLogs);
+        const cleanLogs = JSON.stringify(questionLogs);
         
-        window.location.href = `${scriptURL}?id=${playerIDValue}&stab=${finalLoggedStability}&sync=${finalLoggedSyncScore}&total=${masterModuleQuestionsLength}&mod=${modKey}&site=${siteKey}&choices=${cleanChoices}&logs=${cleanLogs}`;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = scriptURL;
+        
+        const params = {
+            id: playerIDValue,
+            stab: finalLoggedStability,
+            sync: finalLoggedSyncScore,
+            total: masterModuleQuestionsLength,
+            mod: modKey,
+            site: siteKey,
+            choices: cleanChoices,
+            logs: cleanLogs
+        };
+        
+        for (const key in params) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = params[key];
+            form.appendChild(input);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 
     function drawAmbulance() {
@@ -461,6 +488,7 @@
         ctx.fillStyle = '#ff3e3e'; ctx.fillRect(ambulance.x, ambulance.y+35, ambulance.w, 12);
         ctx.fillStyle = '#333'; ctx.fillRect(ambulance.x+4, ambulance.y+8, ambulance.w-8, 20);
     }
+    
     function drawCar(car) {
         ctx.fillStyle = car.color; ctx.fillRect(car.x, car.y, car.w, car.h);
         ctx.fillStyle = '#add8e6'; ctx.fillRect(car.x+4, car.y+8, car.w-8, 12);
@@ -530,7 +558,7 @@
         ctx.beginPath(); ctx.moveTo(canvas.width/2, 0); ctx.lineTo(canvas.width/2, canvas.height); ctx.stroke();
         if (arriving) drawHospital(); traffic.forEach(drawCar); drawAmbulance(); requestAnimationFrame(draw);
     }
-       
+        
     initializeCloudAssets();
     setInterval(update, 1000/60); draw();
 </script>
