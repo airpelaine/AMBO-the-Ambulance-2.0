@@ -107,6 +107,16 @@
                 </div>
             </div>
             <button id="genBtn" class="game-btn btn-green" onclick="processValidation()">VALIDATE & SYNC</button>
+
+            <div id="codeDisplayArea" style="display: none; margin-top: 15px; width: 85%;">
+                <p style="font-size: 11px; color: #aaa; margin-bottom: 5px;">YOUR UNIQUE SYNC CODE:</p>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="syncCodeInput" readonly style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--primary-blue); background: #111; color: var(--warning-gold); font-weight: bold; text-align: center; font-size: 16px;">
+                    <button class="game-btn btn-green" onclick="copyCode()" style="margin: 0; padding: 10px; width: auto;">COPY</button>
+                </div>
+                <button class="game-btn btn-green" style="margin-top: 15px; width: 100%;" onclick="goToForm()">PROCEED TO FORM</button>
+            </div>
+
         </div>
     </div>
     <div class="progress-container"><div id="progressBar"></div></div>
@@ -128,6 +138,7 @@
     let playerIDValue = "", currentQuestionSet = [], questionLogs = [], firstChoiceLogs = [], storyPart = 0;
     let finalLoggedStability = 0, finalLoggedSyncScore = 0, allQuestions = {}; 
     let masterModuleQuestionsLength = 0;
+    let globalDestinationURL = "";
 
     let audioStream = null;
     let audioIsMuted = false;
@@ -449,7 +460,6 @@
 
         const scriptURL = "https://script.google.com/macros/s/AKfycbyaX-yrbpjVWwQj9SKuXPKPOCCgXsAY5NqntnXyE1meihoTAta0B4WPziGBdyJsA-w/exec"; 
         
-        // Pack exact mapped variables into a payload instead of the URL
         const formData = new URLSearchParams();
         formData.append('id', playerIDValue);
         formData.append('stab', finalLoggedStability);
@@ -460,14 +470,15 @@
         formData.append('choices', JSON.stringify(firstChoiceLogs));
         formData.append('logs', JSON.stringify(questionLogs));
 
-        // Send data securely in the background to avoid URL limits, then redirect instantly
         fetch(scriptURL, { method: 'POST', body: formData, mode: 'no-cors' })
             .then(() => {
                 const uniqueCode = playerIDValue + "-" + finalLoggedStability + "-" + finalLoggedSyncScore;
-                const destinationURL = "https://docs.google.com/forms/d/e/1FAIpQLSfsapGwGN0CfhuiUieVz0xU8zRaMs9-qGva90XiNclQm-O2gA/viewform?entry.1802927237=" + playerIDValue + "&entry.556276856=" + encodeURIComponent(uniqueCode);
+                globalDestinationURL = "https://docs.google.com/forms/d/e/1FAIpQLSfsapGwGN0CfhuiUieVz0xU8zRaMs9-qGva90XiNclQm-O2gA/viewform?entry.1802927237=" + playerIDValue + "&entry.556276856=" + encodeURIComponent(uniqueCode);
                 
-                // Directly route player to PhilHealth Form
-                window.top.location.href = destinationURL;
+                // Stop the auto-redirect. Hide the sync button and show the code area instead.
+                genBtn.style.display = 'none';
+                document.getElementById('codeDisplayArea').style.display = 'block';
+                document.getElementById('syncCodeInput').value = uniqueCode;
             })
             .catch(error => {
                 console.error('Error syncing:', error);
@@ -475,6 +486,21 @@
                 genBtn.innerText = "VALIDATE & SYNC"; 
                 genBtn.disabled = false;
             });
+    }
+
+    function copyCode() {
+        const copyText = document.getElementById("syncCodeInput");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            alert("Code copied to clipboard: " + copyText.value);
+        });
+    }
+
+    function goToForm() {
+        if(globalDestinationURL) {
+            window.top.location.href = globalDestinationURL;
+        }
     }
 
     function drawAmbulance() {
