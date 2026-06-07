@@ -6,13 +6,19 @@
     <title>AMBO - Automated Module-Based Outcome</title>
     <style>
         :root { --primary-blue: #00d4ff; --emergency-red: #ff3e3e; --warning-gold: #ffcc00; --success-green: #27ae60; --bg-dark: #0f0f0f; }
-        body { display: flex; justify-content: center; align-items: flex-start; height: 100vh; margin: 0; background: var(--bg-dark); font-family: 'Segoe UI', sans-serif; color: white; overflow: hidden; touch-action: none; padding-top: 15px; }
-        .container { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 420px; margin-top: 60px; }
-        canvas { background: #1a1a1a; border: 3px solid #333; border-radius: 16px; width: 92%; height: auto; box-shadow: 0 0 40px rgba(0,212,255,0.15); }
-        .hud-header-tag { position: absolute; top: -50px; left: 4%; right: 4%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; background: rgba(30, 30, 30, 0.9); padding: 8px 12px; border-radius: 8px; border: 1px solid #444; }
+        
+        /* Fixed UI for 100% Zoom Auto-Fit */
+        body { display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; background: var(--bg-dark); font-family: 'Segoe UI', sans-serif; color: white; overflow: hidden; touch-action: none; }
+        .container { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 420px; height: 100dvh; padding: 60px 0 20px 0; box-sizing: border-box; }
+        
+        canvas { background: #1a1a1a; border: 3px solid #333; border-radius: 16px; box-shadow: 0 0 40px rgba(0,212,255,0.15); max-width: 92%; max-height: calc(100dvh - 110px); width: auto; height: 100%; aspect-ratio: 360 / 580; object-fit: contain; display: block; }
+        
+        .hud-header-tag { position: absolute; top: 15px; left: 4%; right: 4%; display: flex; justify-content: space-between; align-items: center; font-size: 11px; background: rgba(30, 30, 30, 0.9); padding: 8px 12px; border-radius: 8px; border: 1px solid #444; z-index: 50; }
         .stats-bar { width: 92%; display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; font-weight: bold; }
         .stat-red { color: var(--emergency-red); } .stat-blue { color: var(--primary-blue); }
-        #mainOverlay { position: absolute; top: 0px; left: 4%; right: 4%; bottom: 80px; background: rgba(10, 10, 10, 0.96); border: 2px solid var(--primary-blue); border-radius: 20px; display: flex; flex-direction: column; padding: 20px; z-index: 100; backdrop-filter: blur(8px); }
+        
+        #mainOverlay { position: absolute; top: 85px; left: 4%; right: 4%; bottom: 35px; background: rgba(10, 10, 10, 0.96); border: 2px solid var(--primary-blue); border-radius: 20px; display: flex; flex-direction: column; padding: 20px; z-index: 100; backdrop-filter: blur(8px); overflow-y: auto; }
+        
         .story-header { font-size: 18px; color: var(--emergency-red); font-weight: 900; text-align: center; margin-bottom: 10px; text-transform: uppercase; }
         .story-text { font-size: 13px; color: #eee; margin-bottom: 15px; line-height: 1.5; text-align: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary-blue); min-height: 80px; }
         .option-btn { background: #252525; text-align: left; margin-bottom: 8px; padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid #444; width: 100%; color: white; cursor: pointer; transition: background 0.2s; }
@@ -24,11 +30,11 @@
         .form-group { margin-bottom: 12px; text-align: left; width: 100%; }
         .form-group label { display: block; font-size: 10px; color: var(--primary-blue); margin-bottom: 5px; text-transform: uppercase; }
         .form-group input, .form-group select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #111; color: white; box-sizing: border-box; font-size: 14px; }
-        .ambo-avatar { width: 50px; height: 80px; margin: 0 auto 15px; position: relative; background: #fff; border-radius: 4px; border: 2px solid #ccc; }
+        .ambo-avatar { width: 50px; height: 80px; margin: 0 auto 15px; position: relative; background: #fff; border-radius: 4px; border: 2px solid #ccc; flex-shrink: 0; }
         .ambo-avatar::after { content: ''; position: absolute; top: 35px; left: 0; width: 100%; height: 12px; background: var(--emergency-red); }
         .siren-light { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 34px; height: 8px; border-radius: 4px; animation: flickerSiren 0.3s infinite alternate; }
         @keyframes flickerSiren { 0% { background: var(--emergency-red); box-shadow: 0 0 15px var(--emergency-red); } 100% { background: var(--primary-blue); box-shadow: 0 0 15px var(--primary-blue); } }
-        .progress-container { width: 92%; height: 8px; background: #222; border-radius: 10px; margin-top: 15px; border: 1px solid #333; overflow: hidden; }
+        .progress-container { width: 92%; height: 8px; background: #222; border-radius: 10px; margin-top: 10px; border: 1px solid #333; overflow: hidden; flex-shrink: 0; }
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary-blue), #00ff88); transition: width 0.4s ease; }
         .game-btn { padding: 16px 24px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; text-transform: uppercase; letter-spacing: 1px; }
         .btn-green { background: var(--success-green); width: 100%; margin-top: 10px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); }
@@ -37,8 +43,8 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #countdownValue { font-size: 36px; font-weight: bold; color: var(--primary-blue); margin-top: 5px; }
         
-        .audio-toggle-btn { position: absolute; top: 75px; right: 20px; background: rgba(30, 30, 30, 0.9); border: 1px solid #444; border-radius: 8px; color: var(--primary-blue); font-size: 12px; font-weight: bold; padding: 7px 10px; cursor: pointer; z-index: 200; display: flex; align-items: center; justify-content: center; width: 40px; box-sizing: border-box; }
-        .audio-toggle-btn:hover { background: #252525; border-color: var(--primary-blue); }
+        .audio-toggle-btn { position: absolute; top: -1px; right: 8px; background: transparent; border: none; border-radius: 8px; color: var(--primary-blue); font-size: 16px; font-weight: bold; padding: 4px; cursor: pointer; z-index: 200; display: flex; align-items: center; justify-content: center; }
+        .audio-toggle-btn:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -46,7 +52,7 @@
 <div class="container">
     <div class="hud-header-tag">
         <span id="hudModuleTitle">SYSTEMS & TECHNICAL</span>
-        <span id="hudPlayerID" style="margin-right: 45px;">ID: ---</span>
+        <span id="hudPlayerID" style="margin-right: 35px;">ID: ---</span>
         <button class="audio-toggle-btn" id="audioToggleBtn" onclick="toggleAudioStream()">🔊</button>
     </div>
     <div class="stats-bar">
@@ -54,6 +60,9 @@
         <div class="stat-item stat-blue">🏁 <span id="dist">0</span>m</div>
     </div>
     <canvas id="game" width="360" height="580"></canvas>
+    
+    <div class="progress-container"><div id="progressBar"></div></div>
+
     <div id="mainOverlay">
         <div id="screenStart" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
             <div class="ambo-avatar"><div class="siren-light"></div></div>
@@ -61,6 +70,7 @@
             <p style="color: var(--warning-gold); font-size: 11px; margin-bottom: 30px;">Automated Module-Based Outcome</p>
             <button class="game-btn btn-green" id="startMissionBtn" onclick="engageAudioAndProceed()" disabled>LOADING CLOUD CACHE...</button>
         </div>
+        
         <div id="screenDetails" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div class="story-header">DEPLOYMENT</div>
             <div class="form-group">
@@ -80,23 +90,27 @@
             <div class="form-group"><label>Player Number</label><input type="number" id="playerNum" inputmode="numeric" placeholder="Enter employee number"></div>
             <button class="game-btn btn-green" onclick="validateDetails()">CONFIRM DISPATCH</button>
         </div>
+        
         <div id="screenBriefing" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div class="ambo-avatar"><div class="siren-light"></div></div>
             <div id="briefingHeaderTitle" class="story-header">🚨 MISSION BRIEFING 🚨</div>
             <div id="storyContent" class="story-text"></div>
             <button id="storyBtn" class="game-btn btn-green" onclick="nextStory()">CONTINUE</button>
         </div>
+        
         <div id="screenQuiz" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
             <div id="feedbackMsg"></div>
             <div id="qText" style="font-size: 14px; margin-bottom: 10px; font-weight: bold; line-height: 1.4;"></div>
-            <div id="optionsContainer"></div>
-            <button id="quizNextBtn" class="game-btn btn-green" style="display: none; margin-top: 10px;" onclick="advanceQuizSequence()">CONTINUE TO NEXT QUESTION</button>
+            <div id="optionsContainer" style="overflow-y: auto; max-height: 60vh;"></div>
+            <button id="quizNextBtn" class="game-btn btn-green" style="display: none; margin-top: 10px; flex-shrink:0;" onclick="advanceQuizSequence()">CONTINUE TO NEXT QUESTION</button>
         </div>
+        
         <div id="screenLoading" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
             <div class="spinner"></div>
             <div style="font-size: 14px; letter-spacing: 1px; color: #aaa; text-transform: uppercase;">Returning to the driver's seat</div>
             <div id="countdownValue">5</div>
         </div>
+        
         <div id="screenResult" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;">
             <div class="story-header" style="color: var(--success-green); font-size: 22px;">MISSION ACCOMPLISHED!</div>
             <div class="result-data-box">
@@ -116,13 +130,9 @@
                 </div>
                 <button class="game-btn btn-green" style="margin-top: 15px; width: 100%;" onclick="goToForm()">PROCEED TO FORM</button>
             </div>
-
         </div>
     </div>
-    <div class="progress-container"><div id="progressBar"></div></div>
 </div>
-
-<div id="trackingBufferChannel" style="display: none;"></div>
 
 <script>
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRfU0TSbaFOFzD_TNDaoHm_4xyxhl4YkaNLtTHd40t4rMlzbYxnxmwbOFgd1mQMurxFu5kerZT7ufM8/pub?gid=0&single=true&output=csv";
@@ -291,7 +301,7 @@
     function getBriefingText() { 
         return [
             `"System online. Connection established. <b>Hello, Pilot ${playerIDValue}!</b> I am AMBO, your Automated Module-Based Outcome unit"`,
-            `"<b>How to move:</b> Use the <b>Left/Right Arrow Keys</b>"`,
+            `"<b>How to move:</b> Use the <b>Left/Right Arrow Keys</b> or swipe horizontally on mobile."`,
             `"Avoid collisions! Every impact results in a <b>-100m distance deduction</b>, delaying our arrival."`,
             `"<b>The Sync Standard</b>: Only the <b>first answer</b> you choose counts toward your System Sync score."`
         ]; 
@@ -475,7 +485,6 @@
                 const uniqueCode = playerIDValue + "-" + finalLoggedStability + "-" + finalLoggedSyncScore;
                 globalDestinationURL = "https://docs.google.com/forms/d/e/1FAIpQLSfsapGwGN0CfhuiUieVz0xU8zRaMs9-qGva90XiNclQm-O2gA/viewform?entry.1802927237=" + playerIDValue + "&entry.556276856=" + encodeURIComponent(uniqueCode);
                 
-                // Stop the auto-redirect. Hide the sync button and show the code area instead.
                 genBtn.style.display = 'none';
                 document.getElementById('codeDisplayArea').style.display = 'block';
                 document.getElementById('syncCodeInput').value = uniqueCode;
@@ -491,7 +500,7 @@
     function copyCode() {
         const copyText = document.getElementById("syncCodeInput");
         copyText.select();
-        copyText.setSelectionRange(0, 99999); // For mobile devices
+        copyText.setSelectionRange(0, 99999); 
         navigator.clipboard.writeText(copyText.value).then(() => {
             alert("Code copied to clipboard: " + copyText.value);
         });
